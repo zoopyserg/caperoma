@@ -7,11 +7,11 @@ describe 'Projects' do
   before { Project.destroy_all }
 
   it 'displays all projects' do
-    project1 = create :project, name: 'MyProj', jira_project_id: '123'
-    project2 = create :project, name: 'MyProj2', jira_project_id: '321'
+    project1 = create :project, folder_path: '/MyProj', jira_project_id: '123', pivotal_tracker_project_id: '123456'
+    project2 = create :project, folder_path: '/MyProj2', jira_project_id: '321', pivotal_tracker_project_id: '765432'
 
     result = `CAPEROMA_INTEGRATION_TEST=true ruby -I./lib bin/caperoma projects`
-    expect(result).to eq "#{project1.id}) MyProj (jira_project_id: 123)\n#{project2.id}) MyProj2 (jira_project_id: 321)\n"
+    expect(result).to eq "#{project1.id}) /MyProj (jira_project_id: 123, pivotal_tracker_project_id: 123456)\n#{project2.id}) /MyProj2 (jira_project_id: 321, pivotal_tracker_project_id: 765432)\n"
     # TODO: it should also include pivotal project id
   end
 end
