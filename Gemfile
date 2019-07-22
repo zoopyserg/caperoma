@@ -1,5 +1,7 @@
 # frozen_string_literal: true
 
+source 'https://rubygems.org'
+
 ruby '2.6.3'
 
 # Runtime dependencies
@@ -20,7 +22,7 @@ group :development do
   gem 'bundler'
   gem 'database_cleaner'
   gem 'factory_bot_rails'
-  gem 'jeweler'
+  gem 'juwelier'
   gem 'rdoc'
   gem 'rspec'
   gem 'shoulda'

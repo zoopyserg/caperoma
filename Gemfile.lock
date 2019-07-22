@@ -1,5 +1,5 @@
 GEM
-  remote: http://rubygems.org/
+  remote: https://rubygems.org/
   specs:
     actionpack (5.2.3)
       actionview (= 5.2.3)
@@ -70,7 +70,7 @@ GEM
     jaro_winkler (1.5.3)
     jbuilder (2.9.1)
       activesupport (>= 4.2.0)
-    jeweler (2.1.1)
+    juwelier (2.1.1)
       builder
       bundler (>= 1.0)
       git (>= 1.2.5)
@@ -194,7 +194,7 @@ DEPENDENCIES
   faraday
   gmail
   jbuilder
-  jeweler
+  juwelier
   pivotal-tracker
   rdoc
   rspec
@@ -210,4 +210,4 @@ RUBY VERSION
    ruby 2.6.3p62
 
 BUNDLED WITH
-   1.17.2
+   1.17.3
