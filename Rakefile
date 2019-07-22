@@ -104,5 +104,5 @@ Rake::RDocTask.new do |rdoc|
   rdoc.rdoc_files.include('bin/*')
   rdoc.rdoc_files.include('[A-Za-z.]*')
   rdoc.rdoc_files.include('spec/**/*')
-  rdoc.rdoc_files.include('config/*']
+  rdoc.rdoc_files.include('config/*')
 end
