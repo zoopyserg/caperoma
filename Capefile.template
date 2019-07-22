@@ -1,0 +1,48 @@
+# Capefile is a settings file for Caperoma (programming automation system).
+# More detailed information about Caperoma can be found on these sites:
+# http://caperoma.io
+# https://github.com/zoopyserg/caperoma/
+# https://rubygems.org/gems/caperoma
+# http://www.rubydoc.info/gems/caperoma/4.0.1
+
+# This file is formatted as a YAML document.
+
+# A working example of this configuration file in a live project can be seen here:
+# https://github.com/zoopyserg/caperoma/blob/master/Capefile
+
+# --- GITHUB SETTINGS:
+## The relative path to the repository of this project on Github, to which you need to send pull requests.
+# github_repo: owner/repository
+
+# --- JIRA SETTINGS:
+## The full URL of your Jira server where you will create tasks.
+# jira_url: https://example.atlassian.net/
+
+## The ID of this project on your Jira system.
+# jira_project_id: 12345
+
+## Issue identifiers of various types on your Jira system.
+# jira_issue_type_ids:
+#   feature: 10101
+#   bug: 10103
+#   chore: 10100
+#   fix: 10101
+#   meeting: 10100
+
+## Jira conversion identifiers.
+# jira_transition_ids:
+#   todo: 11
+#   in_progress: 21
+#   done: 31
+
+# --- PIVOTAL TRAKCER SETTINGS:
+## The ID of this project on the PivotalTracker site.
+# pivotal_tracker_project_id: 12345678
+
+## What tasks to create in PivotalTracker in case the task from Pivotal is not attached to the task in Caperoma 
+## (i.e. the -p or --pivotal_id parameter was not specified at the time of the task start).
+# create_features_in_pivotal: true
+# create_bugs_in_pivotal: true
+# create_chores_in_pivotal: true
+# create_fixes_in_pivotal_as_chores: false
+# create_meetings_in_pivotal_as_chores: false
