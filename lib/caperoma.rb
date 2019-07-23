@@ -165,24 +165,41 @@ class Caperoma
   # TODO: here is project.jira_url. but it has an undefined method project.
   # should move this method to be inside a project (get ids for this project or something).
   def self.get_jira_issue_type_ids
-    conn = Faraday.new(url: project.jira_url) do |c|
-      c.basic_auth(Account.jira.email, Account.jira.password)
-      c.adapter Faraday.default_adapter
-    end
+    puts 'Getting issue ids from Jira'
 
-    response = conn.get do |request|
-      request.url 'rest/api/3/issuetype.json'
-      # request.body = data
-      request.headers['User-Agent'] = 'Caperoma'
-      request.headers['Content-Type'] = 'application/json'
-    end
+    capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+    if File.exist?(capefile_filename)
+      capedata = YAML.load_file(capefile_filename)
+      if capedata
+        jira_url = capedata['jira_url']
+        if jira_url
+          conn = Faraday.new(url: jira_url) do |c|
+            c.basic_auth(Account.jira.email, Account.jira.password)
+            c.adapter Faraday.default_adapter
+          end
 
-    puts 'Received these issue types:'
+          response = conn.get do |request|
+            request.url 'rest/api/3/issuetype.json'
+            # request.body = data
+            request.headers['User-Agent'] = 'Caperoma'
+            request.headers['Content-Type'] = 'application/json'
+          end
 
-    result = JSON.parse(response.body)
+          puts 'Received these issue types:'
 
-    result.each do |item|
-      puts "ID: #{item['id']}, Name: #{item['name']}"
+          result = JSON.parse(response.body)
+
+          result.each do |item|
+            puts "ID: #{item['id']}, Name: #{item['name']}"
+          end
+        else
+          puts 'Please put at least jira url into your Capefile'
+        end
+      else
+        puts 'Can not parse Capfile. Is it formatted properly?'
+      end
+    else
+      puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
     end
   end
 
@@ -343,19 +360,34 @@ class Caperoma
   def self.get_jira_project_ids
     puts 'Getting projects from Jira'
 
-    conn = Faraday.new(url: Caperoma::Capefile::JIRA_URL) do |c|
-      c.basic_auth(Account.jira.email, Account.jira.password)
-      c.adapter Faraday.default_adapter
-    end
+    capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+    if File.exist?(capefile_filename)
+      capedata = YAML.load_file(capefile_filename)
+      if capedata
+        jira_url = capedata['jira_url']
+        if jira_url
+          conn = Faraday.new(url: jira_url) do |c|
+            c.basic_auth(Account.jira.email, Account.jira.password)
+            c.adapter Faraday.default_adapter
+          end
 
-    response = conn.get do |request|
-      request.url 'rest/api/3/project.json'
-      request.headers['User-Agent'] = 'Caperoma'
-      request.headers['Content-Type'] = 'application/json'
-    end
+          response = conn.get do |request|
+            request.url 'rest/api/3/project.json'
+            request.headers['User-Agent'] = 'Caperoma'
+            request.headers['Content-Type'] = 'application/json'
+          end
 
-    JSON.parse(response.body).each do |project|
-      pp "Name: #{project['name']}, jira_project_id: #{project['id']}"
+          JSON.parse(response.body).each do |project|
+            pp "Name: #{project['name']}, jira_project_id: #{project['id']}"
+          end
+        else
+          puts 'Please put at least jira url into your Capefile'
+        end
+      else
+        puts 'Can not parse Capfile. Is it formatted properly?'
+      end
+    else
+      puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
     end
   end
 
