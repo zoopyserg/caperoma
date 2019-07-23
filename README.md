@@ -239,6 +239,9 @@ caperoma report weekly # sends weekly report now
 ### Initialize
 `caperoma init` - initializes Caperoma inside a project (creates Capefile).
 
+### Get Project IDs from Jira 
+`caperoma get_jira_project_ids` - see what project IDs does your Jira support, to put them into the Capefile.
+
 ### Get Issue IDs from Jira 
 `caperoma get_jira_issue_type_ids` - see what issue IDs does your Jira support, to put them into the Capefile.
 

@@ -18,8 +18,8 @@ when 'copy_airbrake_emails_to_pivotal'
   AirbrakeEmailProcessor.new.process
 when 'projects'
   Project.all.each { |project| puts "#{project.id}) #{project.folder_path} (jira_project_id: #{project.jira_project_id}, pivotal_tracker_project_id: #{project.pivotal_tracker_project_id})" }
-when 'get_jira_issue_type_ids'
-  Caperoma.sync
+when 'get_jira_project_ids'
+  Caperoma.get_jira_project_ids
 when 'from_pivotal' # removing
   puts 'Starting a task from Pivotal'
   action, story_id = ARGV
