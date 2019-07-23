@@ -204,21 +204,67 @@ class Caperoma
   end
 
   def self.get_jira_transition_ids
-    conn = Faraday.new(url: project.jira_url) do |c|
-      c.basic_auth(Account.jira.email, Account.jira.password)
-      c.adapter Faraday.default_adapter
-    end
+    puts 'Getting transition ids from Jira'
 
-    response = conn.post do |request|
-      request.url 'rest/api/3/issue/{some_issue_key_or_id}/transitions.json'
-      request.body = data
-      request.headers['User-Agent'] = 'Caperoma'
-      request.headers['Content-Type'] = 'application/json'
-    end
+    capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+    if File.exist?(capefile_filename)
+      capedata = YAML.load_file(capefile_filename)
+      if capedata
+        jira_url = capedata['jira_url']
+        if jira_url
+          jira_project_id = capedata['jira_project_id']
 
-    puts 'Received these transition types:'
-    JSON.parse(response).each do |item|
-      puts "ID: #{item.id}, Name: #{item.name}"
+          if jira_project_id
+            # get issues for the project
+
+            conn = Faraday.new(url: jira_url) do |c|
+              c.basic_auth(Account.jira.email, Account.jira.password)
+              c.adapter Faraday.default_adapter
+            end
+
+            response = conn.get do |request|
+              request.url "rest/api/3/search?jql=project=%22#{jira_project_id}%22"
+              request.headers['User-Agent'] = 'Caperoma'
+              request.headers['Content-Type'] = 'application/json'
+            end
+
+            issues = JSON.parse(response.body)['issues']
+
+            if !issues.empty?
+              first_issue = issues[0]
+              first_issue_key = first_issue['key']
+
+              conn2 = Faraday.new(url: jira_url) do |c|
+                c.basic_auth(Account.jira.email, Account.jira.password)
+                c.adapter Faraday.default_adapter
+              end
+
+              response = conn2.get do |request|
+                request.url "rest/api/3/issue/#{first_issue_key}/transitions"
+                request.headers['User-Agent'] = 'Caperoma'
+                request.headers['Content-Type'] = 'application/json'
+              end
+
+              transitions = JSON.parse(response.body)['transitions']
+
+              transitions.each do |transition|
+                pp "Name: #{transition['name']}, id: #{transition['id']}"
+              end
+            else
+              puts 'Please create at least one issue in this project manually in the browser.'
+            end
+          else
+            puts 'Please put jira_project_id into your Capefile'
+          end
+
+        else
+          puts 'Please put jira_url into your Capefile'
+        end
+      else
+        puts 'Can not parse Capfile. Is it formatted properly?'
+      end
+    else
+      puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
     end
   end
 
