@@ -355,31 +355,53 @@ class Caperoma
         additional_time_flag_position = argv.index('-a') || argv.index('--additional_time')
         additional_time = argv[additional_time_flag_position + 1] if additional_time_flag_position
 
+        project = Project.all.select { |project| project.jira_project_id == jira_project_id || project.pivotal_tracker_project_id == pivotal_tracker_project_id || project.folder_path == folder_path || project.github_repo == github_repo }.first
+
+        project ||= Project.new
+
+        project.folder_path = folder_path
+        project.jira_url = jira_url
+        project.jira_project_id = jira_project_id
+        project.github_repo = github_repo
+        project.feature_jira_task_id = feature_jira_task_id
+        project.bug_jira_task_id = bug_jira_task_id
+        project.chore_jira_task_id = chore_jira_task_id
+        project.fix_jira_task_id = fix_jira_task_id
+        project.meeting_jira_task_id = meeting_jira_task_id
+        project.jira_transition_id_todo = jira_transition_id_todo
+        project.jira_transition_id_in_progress = jira_transition_id_in_progress
+        project.jira_transition_id_done = jira_transition_id_done
+        project.pivotal_tracker_project_id = pivotal_tracker_project_id
+        project.create_features_in_pivotal = create_features_in_pivotal
+        project.create_bugs_in_pivotal = create_bugs_in_pivotal
+        project.create_chores_in_pivotal = create_chores_in_pivotal
+        project.create_fixes_in_pivotal_as_chores = create_fixes_in_pivotal_as_chores
+        project.create_meetings_in_pivotal_as_chores = create_meetings_in_pivotal_as_chores
+        project.save
+        
+        # get missing data from pivotal
+        if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+          if pivotal_id.present?
+
+            conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
+              c.adapter Faraday.default_adapter
+            end
+
+            response = conn.get do |request|
+              request.url "services/v5/stories/#{pivotal_id}"
+              request.headers['User-Agent'] = 'Caperoma'
+              request.headers['Content-Type'] = 'application/json'
+              request.headers['X-TrackerToken'] = Account.pivotal.password
+            end
+
+            result = JSON.parse response.body
+
+            title ||= result['name']
+            description ||= result['description']
+          end
+        end
+
         if title
-          project = Project.all.select { |project| project.jira_project_id == jira_project_id || project.pivotal_tracker_project_id == pivotal_tracker_project_id || project.folder_path == folder_path || project.github_repo == github_repo }.first
-
-          project ||= Project.new
-
-          project.folder_path = folder_path
-          project.jira_url = jira_url
-          project.jira_project_id = jira_project_id
-          project.github_repo = github_repo
-          project.feature_jira_task_id = feature_jira_task_id
-          project.bug_jira_task_id = bug_jira_task_id
-          project.chore_jira_task_id = chore_jira_task_id
-          project.fix_jira_task_id = fix_jira_task_id
-          project.meeting_jira_task_id = meeting_jira_task_id
-          project.jira_transition_id_todo = jira_transition_id_todo
-          project.jira_transition_id_in_progress = jira_transition_id_in_progress
-          project.jira_transition_id_done = jira_transition_id_done
-          project.pivotal_tracker_project_id = pivotal_tracker_project_id
-          project.create_features_in_pivotal = create_features_in_pivotal
-          project.create_bugs_in_pivotal = create_bugs_in_pivotal
-          project.create_chores_in_pivotal = create_chores_in_pivotal
-          project.create_fixes_in_pivotal_as_chores = create_fixes_in_pivotal_as_chores
-          project.create_meetings_in_pivotal_as_chores = create_meetings_in_pivotal_as_chores
-          project.save
-
           case argv[0]
           when 'chore'
             project.chores.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)

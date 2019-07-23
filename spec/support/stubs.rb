@@ -19,7 +19,7 @@ PROJECTS_LIST = [
       'description' => 'First Project Category'
     }
   }
-].freeze
+]
 
 JIRA_ISSUE_CREATION = {
   'update' => {
@@ -38,7 +38,7 @@ JIRA_ISSUE_CREATION = {
     'description' => 'description',
     'components' => [{ 'id' => '10000' }]
   }
-}.freeze
+}
 
 JIRA_ISSUE_CREATION_RESPONSE = Jbuilder.encode do |j|
   j.id '10000'
@@ -66,76 +66,6 @@ end
 
 RSpec.configure do |config|
   config.before do |example|
-    # if example.metadata[:unstab_capefile].blank?
-    #   Caperoma::Capefile::JIRA_URL = '123'
-    # end
-
-    # if example.metadata[:unstub_git].blank?
-    #   allow_any_instance_of(Feature).to receive(:git_branch)
-    #   allow_any_instance_of(Feature).to receive(:git_commit)
-    #   allow_any_instance_of(Feature).to receive(:git_push)
-    #   allow_any_instance_of(Feature).to receive(:git_last_commit_name).and_return 'some commit'
-    #   allow_any_instance_of(Feature).to receive(:git_current_branch).and_return 'parent-branch'
-    #   allow_any_instance_of(Feature).to receive(:git_pull_request)
-    #   allow_any_instance_of(Feature).to receive(:git_checkout)
-
-    #   allow_any_instance_of(Bug).to receive(:git_branch)
-    #   allow_any_instance_of(Bug).to receive(:git_commit)
-    #   allow_any_instance_of(Bug).to receive(:git_push)
-    #   allow_any_instance_of(Bug).to receive(:git_last_commit_name).and_return 'some commit'
-    #   allow_any_instance_of(Bug).to receive(:git_current_branch).and_return 'parent-branch'
-    #   allow_any_instance_of(Bug).to receive(:git_pull_request)
-    #   allow_any_instance_of(Bug).to receive(:git_checkout)
-
-    #   allow_any_instance_of(Chore).to receive(:git_branch)
-    #   allow_any_instance_of(Chore).to receive(:git_commit)
-    #   allow_any_instance_of(Chore).to receive(:git_push)
-    #   allow_any_instance_of(Chore).to receive(:git_last_commit_name).and_return 'some commit'
-    #   allow_any_instance_of(Chore).to receive(:git_current_branch).and_return 'parent-branch'
-    #   allow_any_instance_of(Chore).to receive(:git_pull_request)
-    #   allow_any_instance_of(Chore).to receive(:git_checkout)
-
-    #   allow_any_instance_of(Fix).to receive(:git_branch)
-    #   allow_any_instance_of(Fix).to receive(:git_commit)
-    #   allow_any_instance_of(Fix).to receive(:git_push)
-    #   allow_any_instance_of(Fix).to receive(:git_last_commit_name).and_return 'some commit'
-    #   allow_any_instance_of(Fix).to receive(:git_current_branch).and_return 'parent-branch'
-    #   allow_any_instance_of(Fix).to receive(:git_pull_request)
-    #   allow_any_instance_of(Fix).to receive(:git_checkout)
-
-    #   allow_any_instance_of(Meeting).to receive(:git_branch)
-    #   allow_any_instance_of(Meeting).to receive(:git_commit)
-    #   allow_any_instance_of(Meeting).to receive(:git_push)
-    #   allow_any_instance_of(Meeting).to receive(:git_last_commit_name).and_return 'some commit'
-    #   allow_any_instance_of(Meeting).to receive(:git_current_branch).and_return 'parent-branch'
-    #   allow_any_instance_of(Meeting).to receive(:git_pull_request)
-    #   allow_any_instance_of(Meeting).to receive(:git_checkout)
-
-    #   allow_any_instance_of(Task).to receive(:git_branch)
-    #   allow_any_instance_of(Task).to receive(:git_commit)
-    #   allow_any_instance_of(Task).to receive(:git_push)
-    #   allow_any_instance_of(Task).to receive(:git_last_commit_name).and_return 'some commit'
-    #   allow_any_instance_of(Task).to receive(:git_current_branch).and_return 'parent-branch'
-    #   allow_any_instance_of(Task).to receive(:git_pull_request)
-    #   allow_any_instance_of(Task).to receive(:git_checkout)
-
-    #   allow_any_instance_of(TaskWithSeparateBranch).to receive(:git_branch)
-    #   allow_any_instance_of(TaskWithSeparateBranch).to receive(:git_commit)
-    #   allow_any_instance_of(TaskWithSeparateBranch).to receive(:git_push)
-    #   allow_any_instance_of(TaskWithSeparateBranch).to receive(:git_last_commit_name).and_return 'some commit'
-    #   allow_any_instance_of(TaskWithSeparateBranch).to receive(:git_current_branch).and_return 'parent-branch'
-    #   allow_any_instance_of(TaskWithSeparateBranch).to receive(:git_pull_request)
-    #   allow_any_instance_of(TaskWithSeparateBranch).to receive(:git_checkout)
-
-    #   allow_any_instance_of(TaskWithCommit).to receive(:git_branch)
-    #   allow_any_instance_of(TaskWithCommit).to receive(:git_commit)
-    #   allow_any_instance_of(TaskWithCommit).to receive(:git_push)
-    #   allow_any_instance_of(TaskWithCommit).to receive(:git_last_commit_name).and_return 'some commit'
-    #   allow_any_instance_of(TaskWithCommit).to receive(:git_current_branch).and_return 'parent-branch'
-    #   allow_any_instance_of(TaskWithCommit).to receive(:git_pull_request)
-    #   allow_any_instance_of(TaskWithCommit).to receive(:git_checkout)
-    # end
-
     if example.metadata[:unstub_reports].blank?
       allow_any_instance_of(Report).to receive(:send_email)
     end
