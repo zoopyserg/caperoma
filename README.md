@@ -32,11 +32,14 @@ Caperoma solves for you:
 - and many more decisions that you often don't realize, and which you can forget hundreds of times during the time of working on the project.
 
 This saves a ton of time.
+
 You don't get distracted on things that you have to do thousands of times per year.
+
 You focus only on solving tasks.
 
+## Scheme
 <img src="images/circle.png" width="100%">
-Everything except "do actual work" Caperoma does for you.
+Everything that is not underlined Caperoma does for you.
 
 ## Demo
 You need to make a feature.
@@ -47,16 +50,22 @@ rspec .
 caperoma finish
 ```
 That's it.
+
 Open Github and you'll see a pull request into the branch from which you started.
+
 The branch and the commit have correct names.
+
 PivotalTracker has a new task.
+
 Jira received the time you spent.
 
 Caperoma did tens of steps for you.
 
 You would spend about 10 minutes manually pressing the buttons in Github, Jira and Pivotal and entering these commands into the console.
 10 minutes for each task, in a project with 1000 tasks, you save up to 20% of the project budget that you did not spend on a routine.
+
 Thanks to Caperoma, you can spend this 20% on new features or fixing bugs.
+
 Not to mention the invaluable savings of brain resources that allow you to easily work on larger projects.
 
 At the same time, tracking systems receive the most accurate information about the work done for further statistics.
@@ -69,9 +78,13 @@ touch ./your_urgent_bugfix.rb
 caperoma finish
 ```
 Every second of delay brings company losses which are often much higher than the price of the bug fix.
+
 Caperoma did all the management for you.
+
 You did not have to do manually dozens of these steps in a hurry (pull requests, time tracking, etc.).
+
 You also did not have to sacrifice conventions for the sake of speed (which often turns into a bad habit, driving a project to a standstill).
+
 You implemented the solution, but on the way to it, you were secured by the Caperoma's algorithms.
 
 ## Task types supported by Caperoma
@@ -192,6 +205,7 @@ The recipients will get:
 - a weekly report on Fri
 
 (8 reports per week in total)
+
 (they are sent at 5 pm, so at that time the computer should be on, as the reports are using crontab).
 
 The format of the emails is a table that lists all the tasks during the mentioned period:
@@ -199,9 +213,13 @@ The format of the emails is a table that lists all the tasks during the mentione
 - Pivotal ID (with a link).
 - Task title.
 - The amount of time spent on the task.
+
 Plus the total amount of time spent on them.
 
+<img src="images/report.png" width="100%">
+
 Each report includes only the tasks that were not yet included in the previous reports of this type.
+
 I.e. if you finished the feature "X" and sent a "daily report" that includes it, then your next "daily report" will not include it (even if you send the second one immediately after the first one), however it will still be included in your next "3 day report" and into your next "weekly report".
 
 You no longer need to spend 3 to 5 unpaid hours on Friday night, making a report in which you are trying to remember which features you created 4 days ago (by the end of the week there are already so many that you probably lost count of half of them).
@@ -267,12 +285,17 @@ $ caperoma projects
 - *If you are already working on something, you won't be able to start a new task. You will have to finish or pause the current task.*
 
 `options`:
+
 `-t, --title` - The name of the feature (for a commit, pull request, tasks in Jira and Pivotal). ` -t` and `--title` are different versions of the same option.
+
 `-d, --description` - The description (for a task in Jira and Pivotal).
+
 `-p, -ptid, --pivotal_task_id` - ID of task in Pivotal (automatically gets started/finished during the work on it in Caperoma).
+
 `-a, --additional_time` - Additional time (in minutes). Intended for cases when you want to indicate that you started working on it X minutes ago (X minutes before starting Caperoma timer). For example, for 1 hour you tried to reproduce the problem before you realized that you need to start a new task. Or if you forgot to start Caperoma. Additional time is always in minutes. Adding 125 minutes (-a 125) will mean that you spent 2h 5m on the task before turning on Caperoma timer.
 
 *The order of options is not important.
+
 Immediately after the operator must be a value.*
 
 Examples:
@@ -292,8 +315,11 @@ caperoma feature --title "title" --description "description" --pivotal_task_id 1
 
 #### Start a Bug 
 `caperoma bug [options]` - Creates a bug in the new branch.
+
 Does almost the same thing as `caperoma feature`, just starts everywhere the tasks of a type "bug".
+
 `options`: same as for `caperoma feature`
+
 Example:
 ```bash
 caperoma bug -t "something isn't working" -a 20
@@ -302,13 +328,18 @@ caperoma bug -t "something isn't working" -a 20
 
 #### Start a Fix  
 `caperoma fix [options]` - Creates a fix in the CURRENT branch, doing at the end just "git push" into the branch, not a pull request.
+
 Everything else is almost the same as `caperoma feature`.
+
 This command is created for the cases when you already have a remote branch, or if you already made a pull request, and you need to go back to it and add something.
+
 This command considers the specifics of work with open pull requests and remote branches:
 - Downloads the latest version of the current branch before starting the work and again before pushing the changes.
 - Changes are made in a new commit instead of a potentially conflicting amend.
 - Leaves the title and description of pull requests.
+
 `options`: same as for `caperoma feature`
+
 Example:
 ```bash
 caperoma fix --title "Spelling fix" -d "Fix the spelling mistake"
@@ -317,15 +348,23 @@ caperoma fix --title "Spelling fix" -d "Fix the spelling mistake"
 
 #### Start a Meeting 
 `caperoma meeting [options]` - Creates a meeting.
+
 For cases when you need to record to Jira the facts of talking on the phone with your coworkers.
+
 Jira ID for the meeting (as for other types of tasks) can be set in Capefile (by default it has the same value as a chore).
+
 In Pivotal creating meetings is off by default. It can be turned on in Capefile. If it is on, Caperoma will create "chores".
+
 `options`: same as for `caperoma feature`
 
 This feature is sometimes used to automate logging phone calls to Jira.
+
 For example, in Skype, you could configure it to call the command `caperoma meeting -t "meeting"` when you pick up the phone and call `caperoma finish` when you hang up.
+
 As a result, Skype conversations will automatically be entered into Jira with accuracy up to a minute.
+
 5-10 people can participate in a conference call, so if each of them sets up Caperoma, you can save a couple of man-hours for each call.
+
 Example:
 ```bash
 caperoma meeting -t "title"
@@ -333,9 +372,13 @@ caperoma meeting -t "title"
 
 #### Start a Chore
 `caperoma chore [options]` - Creates a chore. Without branch and commit.
+
 For cases when the goal of the task is not committing code.
+
 For example, you need to configure something on a remote server.
+
 `options`: same as for `caperoma feature`
+
 Example:
 ```bash
 caperoma chore -t "going downtown to pick up a new computer" -a 10
@@ -346,6 +389,7 @@ caperoma chore -t "going downtown to pick up a new computer" -a 10
 
 #### Finish current task
 `caperoma finish [optional comment]` - ends a task of any type.
+
 Do everything that you usually do after finishing a task:
 - git commit (feature, bug, fix) [commit name consists of the task title, Jira ID and Pivotal ID]
 - runs style guide checks (rubocop -a)
@@ -367,12 +411,15 @@ caperoma finish "completed"
 
 #### Abort current task
 `caperoma abort [optional comment]` - finish without committing / pushing changes.
+
 This command does what you usually need to do to interrupt the task:
 - Logs time to Jira.
 - changes the status of Jira task to "done"
 - changes the status of Pivotal task to "finished"
 - switches to the main branch
+
 All changes to files remain uncommitted.
+
 Examples:
 ```bash
 caperoma abort "can't reproduce"
@@ -383,13 +430,19 @@ caperoma abort
 
 #### Abort current task without logging time
 `caperoma abort_without_time [optional comment]` - same as abort, but does not log time to Jira
+
 Only changes the status of Jira task to "done".
+
 Pivotal task remains started.
+
 Files remain uncommitted.
 
 Example:
+
 Suppose you started a task and fall asleep.
+
 You wake up, the timer is still running.
+
 You stop the timer without logging time to Jira:
 ```
 caperoma abort_without_time
@@ -397,6 +450,7 @@ caperoma abort_without_time
 
 #### Pause current task
 `caperoma pause [optional comment]` — stop work on the task, but not consider it completed (don't make a pull request).
+
 What it will do:
 - git commit (feature, bug, fix) [commit name consists of the task title, Jira ID and Pivotal ID]
 - runs style guide checks (rubocop -a)
@@ -494,6 +548,7 @@ caperoma recipients --add "your_techlead@domain.com"
 
 #### Removing Report Recipients
 `caperoma recipients [remove command] [email]` - removes the `[email]` of the recipient of your reports from the database.
+
 `[remove command]`: `remove`, `--remove`, `-r`, `delete`, `--delete`, `-d` (all these are equivalent).
 
 Examples:
