@@ -22,12 +22,11 @@ describe Caperoma do
           ).count
         }.by(1)
       end
-
     end
 
     context 'title not present but -p can get the title from pivotal', :unstab_api_calls do
       let!(:args) { ['bug', '-p', '1234567'] }
-      
+
       let(:response_body) { { 'name' => 'awesome bug', 'description' => 'some description' }.to_json }
 
       it 'should create' do
@@ -51,7 +50,6 @@ describe Caperoma do
           ).count
         }.by(1)
       end
-
     end
   end
 end

@@ -378,7 +378,7 @@ class Caperoma
         project.create_fixes_in_pivotal_as_chores = create_fixes_in_pivotal_as_chores
         project.create_meetings_in_pivotal_as_chores = create_meetings_in_pivotal_as_chores
         project.save
-        
+
         # get missing data from pivotal
         if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
           if pivotal_id.present?

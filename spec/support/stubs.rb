@@ -19,7 +19,7 @@ PROJECTS_LIST = [
       'description' => 'First Project Category'
     }
   }
-]
+].freeze
 
 JIRA_ISSUE_CREATION = {
   'update' => {
@@ -38,7 +38,7 @@ JIRA_ISSUE_CREATION = {
     'description' => 'description',
     'components' => [{ 'id' => '10000' }]
   }
-}
+}.freeze
 
 JIRA_ISSUE_CREATION_RESPONSE = Jbuilder.encode do |j|
   j.id '10000'
