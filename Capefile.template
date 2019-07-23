@@ -19,11 +19,11 @@
 # jira_url: https://example.atlassian.net/
 
 ## The ID of this project on your Jira system.
-## if you are not sure what is Jira ID of this project, run the command "caperoma get_jira_project_ids" and paste here the ID that you see in the result.
+## If you are not sure what is Jira ID of this project, run the command "caperoma get_jira_project_ids" and paste here the ID that you see in the result.
 # jira_project_id: 12345
 
 ## Issue identifiers of various types on your Jira system.
-## if you are not sure what are Jira Issue Type IDs of this project, run the command "caperoma get_jira_issue_type_ids" and paste here the IDs that you see in the result.
+## If you are not sure what are Jira Issue Type IDs of this project, run the command "caperoma get_jira_issue_type_ids" and paste here the IDs that you see in the result.
 # jira_issue_type_ids:
 #   feature: 10101
 #   bug: 10103
@@ -32,7 +32,7 @@
 #   meeting: 10100
 
 ## Jira transition identifiers.
-## if you are not sure what are Jira Transition IDs of this project, run the command "caperoma get_jira_transition_ids" and paste here the IDs that you see in the result.
+## If you are not sure what are Jira Transition IDs of this project, run the command "caperoma get_jira_transition_ids" and paste here the IDs that you see in the result.
 # jira_transition_ids:
 #   todo: 11
 #   in_progress: 21
