@@ -7,7 +7,9 @@ https://www.patreon.com/sergevinogradoff
 
 ## The idea.
 Caperoma is a "full-cycle" command.
+
 It solves everything that you need to do before you start working on the task, and everything you need to do after you finish the feature.
+
 Caperoma solves for you: 
 - pulling the latest code from upstream before you start working
 - remembering from which branch you started the feature to later make a pull request into it
@@ -27,11 +29,14 @@ Caperoma solves for you:
 - tracking time
 - logging time to Jira 
 - switching back into the original branch
-and many more decisions that you often don't realize, and which you can forget hundreds of times during the time of working on the project.
+- and many more decisions that you often don't realize, and which you can forget hundreds of times during the time of working on the project.
 
 This saves a ton of time.
 You don't get distracted on things that you have to do thousands of times per year.
 You focus only on solving tasks.
+
+<img src="images/circle.png" width="100%">
+Everything except "do actual work" Caperoma does for you.
 
 ## Demo
 You need to make a feature.
