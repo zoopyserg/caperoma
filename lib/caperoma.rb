@@ -193,7 +193,7 @@ class Caperoma
             puts "ID: #{item['id']}, Name: #{item['name']}"
           end
         else
-          puts "Please put at least jira url into your Capefile"
+          puts 'Please put at least jira url into your Capefile'
         end
       else
         puts 'Can not parse Capfile. Is it formatted properly?'
@@ -381,7 +381,7 @@ class Caperoma
             pp "Name: #{project['name']}, jira_project_id: #{project['id']}"
           end
         else
-          puts "Please put at least jira url into your Capefile"
+          puts 'Please put at least jira url into your Capefile'
         end
       else
         puts 'Can not parse Capfile. Is it formatted properly?'
