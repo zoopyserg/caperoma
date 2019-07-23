@@ -213,6 +213,7 @@ The format of the emails is a table that lists all the tasks during the mentione
 - Pivotal ID (with a link).
 - Task title.
 - The amount of time spent on the task.
+
 Plus the total amount of time spent on them.
 
 <img src="images/report.png" width="100%">
