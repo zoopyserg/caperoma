@@ -215,6 +215,8 @@ The format of the emails is a table that lists all the tasks during the mentione
 - The amount of time spent on the task.
 Plus the total amount of time spent on them.
 
+<img src="images/report.png" width="100%">
+
 Each report includes only the tasks that were not yet included in the previous reports of this type.
 
 I.e. if you finished the feature "X" and sent a "daily report" that includes it, then your next "daily report" will not include it (even if you send the second one immediately after the first one), however it will still be included in your next "3 day report" and into your next "weekly report".
