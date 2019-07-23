@@ -12,6 +12,8 @@ when 'setup'
   Caperoma.setup
 when 'get_jira_issue_type_ids'
   Caperoma.get_jira_issue_type_ids
+when 'get_jira_transition_ids'
+  Caperoma.get_jira_transition_ids
 when 'init'
   Caperoma.init
 when 'copy_airbrake_emails_to_pivotal'
