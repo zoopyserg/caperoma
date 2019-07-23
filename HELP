@@ -13,6 +13,9 @@ Available commands
 
 ### Get Issue IDs from Jira 
 `caperoma get_jira_issue_type_ids` - see what issue IDs does your Jira support, to put them into the Capefile.
+#
+### Get Transition IDs from Jira 
+`caperoma get_jira_transition_ids` - see what transition IDs does your Jira support, to put them into the Capefile.
 
 ### Status
 `caperoma status` - shows a task you are working on now.

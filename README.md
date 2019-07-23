@@ -124,9 +124,43 @@ caperoma accounts add --git login password
 
 ## Setting up your project:
 ```bash
-cd ~/myproject # open your project
-caperoma init # create Capefile
-vim Capefile # open Capefile to enter the settings.
+# Open your project
+cd ~/myproject 
+
+# Create Capefile
+caperoma init 
+
+# Add your Jira link to Capefile: 
+echo "jira_url: https://yourproject.atlassian.net/" >> Capefile  
+
+# Get project IDs from Jira
+caperoma get_jira_project_ids
+# The response will be something like this:
+# 1) Awesome Project (jira_project_id: 1234)
+# ...
+
+# Paste the received project ID into Capefile
+echo "jira_project_id: 1234" >> Capefile
+
+# Get issue type IDs from Jira:  
+caperoma get_jira_issue_type_ids
+# The response will be something like this:
+# ID: 12, Name: Bug
+# ID: 15, Name: Feature
+# ...
+
+# Get transition type IDs from Jira:
+caperoma get_jira_transition_ids
+# This command requires you to have at least one issue in the project, as it will be used to receive transition ids.
+# The response will be something like this:
+# ID: 30, Name: To do
+# ID: 102, Name: In Progress
+# ID: 201, Name: Done
+
+# Enter the received IDs into corresponding fields in Capefile:
+vim Capefile 
+
+# Also, enter the rest of the settings into Capefile (git repository, Pivotal project ID, etc.).
 ```
 
 ## Demo 3: A simple feature.
@@ -244,6 +278,9 @@ caperoma report weekly # sends weekly report now
 
 ### Get Issue IDs from Jira 
 `caperoma get_jira_issue_type_ids` - see what issue IDs does your Jira support, to put them into the Capefile.
+
+### Get Transition IDs from Jira 
+`caperoma get_jira_transition_ids` - see what transition IDs does your Jira support, to put them into the Capefile.
 
 ### Status
 `caperoma status` - shows a task you are working on now.
