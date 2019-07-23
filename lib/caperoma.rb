@@ -228,9 +228,9 @@ class Caperoma
               request.headers['Content-Type'] = 'application/json'
             end
 
-            issues = JSON.parse(response.body)["issues"]
-            
-            if issues.length > 0
+            issues = JSON.parse(response.body)['issues']
+
+            if !issues.empty?
               first_issue = issues[0]
               first_issue_key = first_issue['key']
 
@@ -245,7 +245,7 @@ class Caperoma
                 request.headers['Content-Type'] = 'application/json'
               end
 
-              transitions = JSON.parse(response.body)["transitions"]
+              transitions = JSON.parse(response.body)['transitions']
 
               transitions.each do |transition|
                 pp "Name: #{transition['name']}, id: #{transition['id']}"
