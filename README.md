@@ -156,7 +156,7 @@ caperoma finish
 # Switched back to the branch from which the work was started (for example, git checkout master).
 ```
 
-## Demo 4: A feature with Pivotal ID and your description:
+## Demo 4: A feature with Pivotal ID and your work description:
 ```bash
 caperoma feature --t "your second feature" -p 12345678
 # Same as before, but also:
@@ -180,6 +180,7 @@ caperoma feature -t "your third feature" -p 12345678 -a 23
 # The alternative version of this parameter is: --additional_time 23
 
 touch ./your_first_feature.rb
+
 caperoma finish
 # Time sent to Jira will be 23 minutes more than the timer recorded.
 # I.e. if you spent 10 minutes on this task, Jira will receive 33 minutes (10+23, "timer time" + "additional time").
@@ -282,21 +283,24 @@ $ caperoma projects
 - *If the -p parameter is specified, Caperoma starts Pivotal task with this ID.*
 - *If the -p parameter is not specified, Caperoma will create a new task in Pivotal, start it and use its ID.*
 - *The creation of certain types of tasks in Pivotal (when -p is absent) can be turned on or off in Capefile.*
-- *If you are already working on something, you won't be able to start a new task. You will have to finish or pause the current task.*
+- *If you are already working on something, you won't be able to start a new task. First you will have to finish or pause the current task.*
 
 `options`:
 
-`-t, --title` - The name of the feature (for a commit, pull request, tasks in Jira and Pivotal). ` -t` and `--title` are different versions of the same option.
+`-t`, `--title` - The name of the feature (for a commit, pull request, tasks in Jira and Pivotal). ` -t` and `--title` are different versions of the same option.
 
-`-d, --description` - The description (for a task in Jira and Pivotal).
 
-`-p, -ptid, --pivotal_task_id` - ID of task in Pivotal (automatically gets started/finished during the work on it in Caperoma).
+`-d`, `--description` - The description (for a task in Jira and Pivotal).
 
-`-a, --additional_time` - Additional time (in minutes). Intended for cases when you want to indicate that you started working on it X minutes ago (X minutes before starting Caperoma timer). For example, for 1 hour you tried to reproduce the problem before you realized that you need to start a new task. Or if you forgot to start Caperoma. Additional time is always in minutes. Adding 125 minutes (-a 125) will mean that you spent 2h 5m on the task before turning on Caperoma timer.
 
-*The order of options is not important.
+`-p`, `-ptid`, `--pivotal_task_id` - ID of task in Pivotal (automatically gets started/finished during the work on it in Caperoma).
 
-Immediately after the operator must be a value.*
+
+`-a`, `--additional_time` - Additional time (in minutes). Intended for cases when you want to indicate that you started working on it X minutes ago (X minutes before starting Caperoma timer). For example, for 1 hour you tried to reproduce the problem before you realized that you need to start a new task. Or if you forgot to start Caperoma. Additional time is always in minutes. Adding 125 minutes (-a 125) will mean that you spent 2h 5m on the task before turning on Caperoma timer.
+
+*The order of options is not important.*
+
+*Immediately after the operator must be a value.*
 
 Examples:
 ```bash
@@ -466,6 +470,7 @@ To finish the paused task, you will need to manually switch into its branch and 
 Finishing the task will be done by new independent tasks in Jira.
 
 Example:
+
 Suppose you need to urgently switch to another task.
 ```bash
 ...
@@ -490,10 +495,15 @@ caperoma finish
 
 #### Adding Accounts
 `caperoma accounts [add command] [account_type] [login] [password] [assignee]` - add (or overwrite) an account of type [account_type] to the database.
+
 `[add command]`: `-a`, `add`, `--add`, `-c`, `create`, `--create` (all these are equivalent).
+
 `[account_type]`: One of: `--jira`, `--pivotal` `--git`, `--gmail`
+
 `[login]` is your account login (email or username).
+
 `[password]` for --jira and --pivotal should be api_tokens (password won't do). for --git and --gmail it should be your password.
+
 `[assignee]` is only for --jira, for other types no need to write anything there.
 
 Examples:
@@ -509,7 +519,9 @@ caperoma accounts --create --gmail login password   # Add Gmail account for repo
 
 #### Removing accounts
 `caperoma accounts [remove_command] [account_type]` - remove an account of a given type.
+
 `[remove_command]`: `remove`, `--remove`, `-r`, `delete`, `--delete`, `-d` (all these are equivalent).
+
 `[account_type]`: One of the following: `--jira`, `--pivotal`, `--git`, `--gmail`
 
 Examples:
@@ -522,10 +534,12 @@ caperoma accounts -delete --gmail # Remove Gmail account for reports
 
 ### Deleting all data from this computer
 `caperoma delete_history` - removes the caperoma database, so deletes the information on the tasks, time spent, branch names, account credentials, etc.
+
 Keeps the folders of your projects intact.
 
 ### Version:
 `caperoma -v` - shows Caperoma version
+
 `caperoma version` - shows Caperoma version
 
 ### Recipients
@@ -534,7 +548,9 @@ Keeps the folders of your projects intact.
 
 #### Adding Report Recipients:
 `caperoma recipients [add command] [email]` - adds an email of a recipient of your reports to the database.
+
 `[add command]`: `-a`, `add`, `--add`, `-c`, `create`, `--create` (all these are equivalent).
+
 `[email]` - the email of the recipient
 
 Examples:
@@ -560,16 +576,20 @@ caperoma recipients --delete "your_supervisor@domain.com"
 
 ### Automatic Reports
 `caperoma report auto on` - turns on automatic report sending to all your recipients.
+
 `caperoma report auto off` - turn off automatic report sending to all your recipients.
 
 ### Sending Reports Manually
 `caperoma report daily` - send a daily report right now
+
 `caperoma report -d` - send a daily report right now
 
 `caperoma report three_day` - send a three-day report right now
+
 `caperoma report -t` - send a three-day report right now
 
 `caperoma report weekly` - send a weekly report right now
+
 `caperoma report -w` - send a weekly report right now
 
 ### Support me on Patreon.
