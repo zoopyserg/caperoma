@@ -37,8 +37,9 @@ You don't get distracted on things that you have to do thousands of times per ye
 
 You focus only on solving tasks.
 
+## Scheme
 <img src="images/circle.png" width="100%">
-Everything except "do actual work" Caperoma does for you.
+Everything that is not underlined Caperoma does for you.
 
 ## Demo
 You need to make a feature.
