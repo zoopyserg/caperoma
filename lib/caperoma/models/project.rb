@@ -9,6 +9,6 @@ class Project < ApplicationRecord
   has_many :fixes
 
   def folder_path
-    %(#{self[:folder_path]})
+    (self[:folder_path]).to_s
   end
 end

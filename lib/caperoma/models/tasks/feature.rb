@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 class Feature < TaskWithSeparateBranch
   before_create :inform_creation_started
   after_create :inform_creation_finished

@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 class Fix < TaskWithCommit
   before_create :update_parent_branch
   before_create :inform_creation_started
@@ -16,6 +17,7 @@ class Fix < TaskWithCommit
   end
 
   private
+
   def create_issue_on_pivotal_data
     Jbuilder.encode do |j|
       j.current_state 'unstarted'

@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 class Task < ActiveRecord::Base
   include Git
 
@@ -47,11 +48,11 @@ class Task < ActiveRecord::Base
   end
 
   def self.status
-    if unfinished.length == 0 
-      puts "You are not working on anything now." 
-    else 
-      unfinished.each do |task| 
-        puts "You are working on: "
+    if unfinished.empty?
+      puts 'You are not working on anything now.'
+    else
+      unfinished.each do |task|
+        puts 'You are working on: '
         puts "Title: #{task.title}"
         puts "Type: #{task.type}"
         puts "Jira ID: #{task.jira_key}." if task.jira_key.present?
@@ -92,7 +93,7 @@ class Task < ActiveRecord::Base
     puts time_spent
   end
 
-  def abort_without_time(comment)
+  def abort_without_time(_comment)
     # finish without commit or push
     update_attribute(:finished_at, Time.now)
     close_issue_on_jira

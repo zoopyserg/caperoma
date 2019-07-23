@@ -162,7 +162,7 @@ class Caperoma
     end
   end
 
-  # todo: here is project.jira_url. but it has an undefined method project.
+  # TODO: here is project.jira_url. but it has an undefined method project.
   # should move this method to be inside a project (get ids for this project or something).
   def self.get_jira_issue_type_ids
     conn = Faraday.new(url: project.jira_url) do |c|
@@ -172,7 +172,7 @@ class Caperoma
 
     response = conn.get do |request|
       request.url 'rest/api/3/issuetype.json'
-      #request.body = data
+      # request.body = data
       request.headers['User-Agent'] = 'Caperoma'
       request.headers['Content-Type'] = 'application/json'
     end
@@ -214,7 +214,7 @@ class Caperoma
 
   def self.create_task(argv)
     # test if Capefile exists
-    capefile_filename = (ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?) ? 'Capefile' : 'Capefile.test'
+    capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
 
     if File.exist?(capefile_filename)
       capedata = nil
@@ -237,7 +237,7 @@ class Caperoma
       create_fixes_in_pivotal_as_chores = nil
       create_meetings_in_pivotal_as_chores = nil
 
-      capedata = YAML.load_file(capefile_filename) 
+      capedata = YAML.load_file(capefile_filename)
       if capedata
         jira_url = capedata['jira_url']
         jira_project_id = capedata['jira_project_id']
@@ -317,7 +317,6 @@ class Caperoma
           project.create_meetings_in_pivotal_as_chores = create_meetings_in_pivotal_as_chores
           project.save
 
-
           case argv[0]
           when 'chore'
             project.chores.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
@@ -339,7 +338,6 @@ class Caperoma
     else
       puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
     end
-
   end
 
   def self.get_jira_project_ids
@@ -356,7 +354,7 @@ class Caperoma
       request.headers['Content-Type'] = 'application/json'
     end
 
-    JSON.parse(response.body).each_with_index do |project|
+    JSON.parse(response.body).each do |project|
       pp "Name: #{project['name']}, jira_project_id: #{project['id']}"
     end
   end

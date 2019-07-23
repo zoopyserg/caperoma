@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 class TaskWithSeparateBranch < TaskWithCommit
   before_create :update_parent_branch
   before_create :remember_parent_branch
