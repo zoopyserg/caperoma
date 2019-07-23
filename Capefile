@@ -16,18 +16,18 @@ github_repo: zoopyserg/caperoma
 
 # --- JIRA SETTINGS:
 ## The full URL of your Jira server where you will create tasks.
-jira_url: https://zoopyserg.atlassian.net/
+jira_url: https://sergevinogradoff.atlassian.net/
 
 ## The ID of this project on your Jira system.
 jira_project_id: 10001
 
 ## Issue identifiers of various types on your Jira system.
 jira_issue_type_ids:
-  feature: 10101
-  bug: 10103
-  chore: 10100
-  fix: 10101
-  meeting: 10100
+  feature: 10001
+  bug: 10004
+  chore: 10001
+  fix: 10001
+  meeting: 10001
 
 ## Jira conversion identifiers.
 jira_transition_ids:
