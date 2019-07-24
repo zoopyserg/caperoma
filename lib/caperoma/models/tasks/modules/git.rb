@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 module Git
-  def git_branch(name)
-    `git -C "#{project.folder_path}" checkout -b #{name}` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
+  def git_branch
+    `git -C "#{project.folder_path}" checkout -b #{branch}` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
   end
 
   def git_commit(msg)
@@ -21,12 +21,12 @@ module Git
     `git -C "#{project.folder_path}" rev-parse --abbrev-ref HEAD`.gsub("\n", '') if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
   end
 
-  def git_pull_request(into, title, description = '')
+  def git_pull_request
     pull_request_data = Jbuilder.encode do |j|
       j.title title
-      j.body description
-      j.head git_current_branch
-      j.base into
+      j.body description_for_pull_request
+      j.head branch
+      j.base parent_branch
     end
 
     conn = Faraday.new(url: 'https://api.github.com') do |c|
@@ -59,7 +59,7 @@ module Git
     end
   end
 
-  def git_checkout(branch)
-    `git -C "#{project.folder_path}" checkout #{branch}` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
+  def git_checkout(_branch)
+    `git -C "#{project.folder_path}" checkout #{_branch}` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
   end
 end
