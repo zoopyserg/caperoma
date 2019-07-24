@@ -41,6 +41,8 @@ You focus only on solving tasks.
 <img src="images/circle.png" width="100%">
 Everything that is not underlined Caperoma does for you.
 
+The development of Caperoma is developing in the direction of closing this circle.
+
 ## Demo
 You need to make a feature.
 ```bash
