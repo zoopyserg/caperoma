@@ -13,7 +13,7 @@ RSpec.describe Task, type: :model do
   describe 'validations' do
     it { expect(subject).to validate_presence_of(:title) }
 
-    describe 'length' do
+    describe 'pivotal_id' do
       it { expect(subject).to allow_value(nil).for(:pivotal_id) }
       it { expect(subject).to allow_value('123456').for(:pivotal_id) }
       it { expect(subject).to allow_value('1234567').for(:pivotal_id) }
@@ -22,6 +22,14 @@ RSpec.describe Task, type: :model do
       it { expect(subject).not_to allow_value('#12345678').for(:pivotal_id) }
       it { expect(subject).not_to allow_value('12').for(:pivotal_id) }
       it { expect(subject).not_to allow_value('123.45678').for(:pivotal_id) }
+    end
+
+    describe 'additional_time' do
+      it { expect(subject).to allow_value(nil).for(:additional_time) }
+      it { expect(subject).to allow_value('12').for(:additional_time) }
+      it { expect(subject).to allow_value('123456').for(:additional_time) }
+      it { expect(subject).not_to allow_value('#12345678').for(:additional_time) }
+      it { expect(subject).not_to allow_value('123.45678').for(:additional_time) }
     end
   end
 

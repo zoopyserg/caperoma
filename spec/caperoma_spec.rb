@@ -24,6 +24,42 @@ describe Caperoma do
       end
     end
 
+    context 'title present and additional time present' do
+      let!(:args) { ['bug', '-t', 'awesome bug', '-a', '5'] }
+
+      it 'should create' do
+        expect do
+          Caperoma.create_task(args)
+        end.to change {
+          Bug.where(
+            title: 'awesome bug',
+            project_id: project.id,
+            additional_time: 5
+          ).count
+        }.by(1)
+      end
+    end
+
+    context 'title present but additional time is invalid' do
+      let!(:args) { ['bug', '-t', 'awesome bug', '-a', 'gsov'] }
+
+      it 'should not create' do
+        expect do
+          Caperoma.create_task(args)
+        end.to change {
+          Bug.where(
+            title: 'awesome bug',
+            project_id: project.id
+          ).count
+        }.by(0)
+      end
+
+      it 'should say why it is not starting', :unstub_puts do
+        expect(STDOUT).to receive(:puts).with /not_a_number/
+        Caperoma.create_task(args)
+      end
+    end
+
     context 'title and pivotal id present but pivotal id is invalid' do
       let!(:args) { ['bug', '-t', 'awesome bug', '-p', 'sdklfvnslfkvs'] }
 
@@ -39,8 +75,9 @@ describe Caperoma do
         }.by(1)
       end
 
-      it 'should say why it is skipping' do
-        expect(STDOUT).to receive(:puts).with /Proceeding as if Pivotal ID was not set./
+      it 'should say why it is skipping', :unstub_puts do
+        expect(STDOUT).to receive(:puts).with /Pivotal ID needs to be copied from the task in Pivotal/
+        allow(STDOUT).to receive(:puts)
         Caperoma.create_task(args)
       end
     end

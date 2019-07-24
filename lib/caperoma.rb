@@ -104,6 +104,7 @@ class Caperoma
         t.column :parent_branch, :string
         t.column :branch, :string
         t.column :pivotal_id, :string
+        t.column :additional_time, :integer
         t.column :started_at, :datetime
         t.column :finished_at, :datetime
         t.column :daily_report_id, :integer
@@ -404,17 +405,25 @@ class Caperoma
         end
 
         if title
+          record = nil
+
           case argv[0]
           when 'chore'
-            project.chores.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.chores.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
           when 'bug'
-            project.bugs.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.bugs.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
           when 'feature'
-            project.features.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.features.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
           when 'fix'
-            project.fixes.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.fixes.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
           when 'meeting'
-            project.meetings.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.meetings.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+          end
+
+          if record.valid?
+            record.save
+          else
+            puts record.errors.details.to_s
           end
         else
           puts "Title is required. Add -t \"my #{argv[0]} title\" flag."

@@ -11,6 +11,8 @@ class Task < ActiveRecord::Base
   validates :title, presence: true
   validates :pivotal_id, length: { minimum: 6 }, allow_blank: true, numericality: { only_integer: true }
 
+  validates :additional_time, allow_blank: true, numericality: { only_integer: true }
+
   before_create :generate_uuid
   before_create :set_start_time
 
@@ -63,8 +65,6 @@ class Task < ActiveRecord::Base
       end
     end
   end
-
-  attr_writer :additional_time
 
   def finish(comment)
     # full pull request
@@ -163,7 +163,7 @@ class Task < ActiveRecord::Base
 
   def set_start_time
     time = Time.now
-    time -= @additional_time.to_i.minutes if @additional_time.present?
+    time -= additional_time.to_i.minutes if additional_time.present?
     self.started_at = time
   end
 
