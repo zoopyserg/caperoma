@@ -24,6 +24,27 @@ describe Caperoma do
       end
     end
 
+    context 'title and pivotal id present but pivotal id is invalid' do
+      let!(:args) { ['bug', '-t', 'awesome bug', '-p', 'sdklfvnslfkvs'] }
+
+      it 'should create but skip pivotal id' do
+        expect do
+          Caperoma.create_task(args)
+        end.to change {
+          Bug.where(
+            title: 'awesome bug',
+            pivotal_id: nil,
+            project_id: project.id
+          ).count
+        }.by(1)
+      end
+
+      it 'should say why it is skipping' do
+        expect(STDOUT).to receive(:puts).with /Proceeding as if Pivotal ID was not set./
+        Caperoma.create_task(args)
+      end
+    end
+
     context 'title not present but -p can get the title from pivotal', :unstab_api_calls do
       let!(:args) { ['bug', '-p', '1234567'] }
 
