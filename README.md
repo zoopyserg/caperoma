@@ -40,6 +40,7 @@ You focus only on solving tasks.
 ## Scheme
 <img src="images/circle.png" width="100%">
 Everything that is not underlined Caperoma does for you.
+
 The development of Caperoma is developing in the direction of closing this circle.
 
 ## Demo
