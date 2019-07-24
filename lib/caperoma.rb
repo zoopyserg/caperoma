@@ -37,8 +37,6 @@ require 'caperoma/models/tasks/meeting'
 
 require 'caperoma/models/report_recipient'
 
-require 'caperoma/models/branch'
-
 require 'caperoma/models/report'
 require 'caperoma/models/reports/daily_report'
 require 'caperoma/models/reports/three_day_report'
@@ -93,17 +91,8 @@ class Caperoma
       end
       add_index :projects, :jira_project_id
 
-      create_table :branches do |t|
-        t.column :project_id, :integer
-        t.column :name, :string
-
-        t.timestamps
-      end
-      add_index :branches, :project_id
-
       create_table :tasks do |t|
         t.column :project_id, :integer
-        t.column :branch_id, :integer
         t.column :title, :string
         t.column :description, :text
         t.column :url, :text
@@ -113,6 +102,7 @@ class Caperoma
         t.column :jira_key, :string
         t.column :jira_url, :string
         t.column :parent_branch, :string
+        t.column :branch, :string
         t.column :pivotal_id, :string
         t.column :started_at, :datetime
         t.column :finished_at, :datetime
@@ -123,7 +113,6 @@ class Caperoma
         t.timestamps
       end
       add_index :tasks, :project_id
-      add_index :tasks, :branch_id
       add_index :tasks, :daily_report_id
       add_index :tasks, :three_day_report_id
       add_index :tasks, :retrospective_report_id

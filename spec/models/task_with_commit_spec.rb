@@ -7,10 +7,6 @@ RSpec.describe TaskWithCommit, type: :model do
     it { expect(subject).to be_a_kind_of Task }
   end
 
-  describe 'relations' do
-    it { expect(subject).to belong_to :branch }
-  end
-
   describe 'methods' do
     describe '#finish' do
       let!(:task) { create :task_with_commit }

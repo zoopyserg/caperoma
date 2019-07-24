@@ -1,8 +1,6 @@
 # frozen_string_literal: true
 
 class TaskWithCommit < Task
-  belongs_to :branch
-
   def finish(comment)
     super
     git_commit(commit_message)
