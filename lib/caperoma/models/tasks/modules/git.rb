@@ -14,7 +14,7 @@ module Git
   end
 
   def git_last_commit_name
-    `git -C "#{project.folder_path}" log --pretty=format:'%s' -1` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
+    `git -C "#{project.folder_path}" log #{parent_branch}..#{branch} --oneline --pretty=format:'%s' --skip=1 -1` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
   end
 
   def git_current_branch
