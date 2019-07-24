@@ -370,7 +370,6 @@ class Caperoma
         project.create_meetings_in_pivotal_as_chores = create_meetings_in_pivotal_as_chores
         project.save
 
-
         # get missing data from pivotal
         if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
           if pivotal_id.present?
@@ -393,11 +392,11 @@ class Caperoma
               description ||= result['description']
 
             else
-              puts "Pivotal ID needs to be copied from the task in Pivotal (in either 12345678 or #12345678 format)."
+              puts 'Pivotal ID needs to be copied from the task in Pivotal (in either 12345678 or #12345678 format).'
               puts "Pivotal ID you entered was #{pivotal_id}, which does not match the allowed format."
-              puts "Skipping usage of this ID."
-              puts "Proceeding as if Pivotal ID was not set."
-              puts "Please start/finish the needed task in Pivotal manually."
+              puts 'Skipping usage of this ID.'
+              puts 'Proceeding as if Pivotal ID was not set.'
+              puts 'Please start/finish the needed task in Pivotal manually.'
 
               pivotal_id = nil
             end
