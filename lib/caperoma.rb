@@ -344,6 +344,8 @@ class Caperoma
         additional_time_flag_position = argv.index('-a') || argv.index('--additional_time')
         additional_time = argv[additional_time_flag_position + 1] if additional_time_flag_position
 
+        pivotal_id = pivotal_id.gsub(/#/, '') if pivotal_id.present?
+
         project = Project.all.select { |project| project.jira_project_id == jira_project_id || project.pivotal_tracker_project_id == pivotal_tracker_project_id || project.folder_path == folder_path || project.github_repo == github_repo }.first
 
         project ||= Project.new
