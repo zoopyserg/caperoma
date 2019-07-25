@@ -23,7 +23,7 @@ module Git
         request.headers['Content-Type'] = 'application/json'
       end
 
-      `git -C "#{project.folder_path}" push --set-upstream origin #{git_current_branch}` 
+      `git -C "#{project.folder_path}" push --set-upstream origin #{git_current_branch}`
     end
   rescue Faraday::ConnectionFailed
     puts 'Connection failed. Performing the task without pushing to Git.'
