@@ -110,6 +110,41 @@ describe Caperoma do
       end
     end
 
+    context 'title not present, -p present, but pivotal gave an error', :unstab_api_calls do
+      let!(:args) { ['bug', '-p', '1234567'] }
+
+      let(:response_body) { { 'name' => 'awesome bug', 'description' => 'some description' }.to_json }
+
+      before do
+        response = double('Faraday', body: response_body, status: 401)
+        faraday = double('Faraday', post: response)
+
+        allow(Faraday).to receive(:new).and_return faraday
+        allow(Faraday).to receive(:default_adapter)
+
+        allow(faraday).to receive(:post).and_return response
+        allow(faraday).to receive(:get).and_return response
+        allow(faraday).to receive(:put).and_return response
+      end
+
+      it 'should not create' do
+        expect do
+          Caperoma.create_task(args)
+        end.to change {
+          Bug.where(
+            title: 'awesome bug',
+            description: 'some description',
+            project_id: project.id
+          ).count
+        }.by(0)
+      end
+
+      it 'should say it could not get access' do
+        expect(STDOUT).to receive(:puts).with /No access/
+        Caperoma.create_task(args)
+      end
+    end
+
     context 'title not present but -p can get the title from pivotal, but pivotal_id is set in #1234567 format (not just numbers)', :unstab_api_calls do
       let!(:args) { ['bug', '-p', '#1234567'] }
 
