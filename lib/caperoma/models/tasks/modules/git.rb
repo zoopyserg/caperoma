@@ -10,8 +10,21 @@ module Git
   end
 
   def git_push
-    Faraday.get('https://api.github.com')
-    `git -C "#{project.folder_path}" push --set-upstream origin #{git_current_branch}` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
+    if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
+      conn = Faraday.new(url: 'https://api.github.com') do |c|
+        c.basic_auth(Account.git.email, Account.git.password)
+        c.adapter Faraday.default_adapter
+      end
+
+      conn.get do |request|
+        request.url "/repos/#{project.github_repo}/pulls"
+        request.headers['User-Agent'] = 'Caperoma'
+        request.headers['Accept'] = 'application/vnd.github.v3+json'
+        request.headers['Content-Type'] = 'application/json'
+      end
+
+      `git -C "#{project.folder_path}" push --set-upstream origin #{git_current_branch}` 
+    end
   rescue Faraday::ConnectionFailed
     puts 'Connection failed. Performing the task without pushing to Git.'
   end
@@ -66,7 +79,18 @@ module Git
 
   def git_actual_rebase
     if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
-      Faraday.get('https://api.github.com')
+      conn = Faraday.new(url: 'https://api.github.com') do |c|
+        c.basic_auth(Account.git.email, Account.git.password)
+        c.adapter Faraday.default_adapter
+      end
+
+      conn.get do |request|
+        request.url "/repos/#{project.github_repo}/pulls"
+        request.headers['User-Agent'] = 'Caperoma'
+        request.headers['Accept'] = 'application/vnd.github.v3+json'
+        request.headers['Content-Type'] = 'application/json'
+      end
+
       `git -C "#{project.folder_path}" fetch && git -C "#{project.folder_path}" rebase $(git -C "#{project.folder_path}" rev-parse --abbrev-ref --symbolic-full-name @{u})`
     end
   rescue Faraday::ConnectionFailed
