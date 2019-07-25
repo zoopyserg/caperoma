@@ -194,10 +194,10 @@ class Task < ActiveRecord::Base
         request.headers['Content-Type'] = 'application/json'
         request.headers['X-TrackerToken'] = Account.pivotal.password
       end
-    end 
+    end
   rescue Faraday::ConnectionFailed
     puts 'Connection failed. Performing the task without requests to Pivotal.'
-  end   
+  end
 
   def finish_on_pivotal_data
     Jbuilder.encode do |j|

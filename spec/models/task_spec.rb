@@ -258,9 +258,9 @@ RSpec.describe Task, type: :model do
         end
 
         it 'should still create the task' do
-          expect {
+          expect do
             task.save
-          }.to change {
+          end.to change {
             Task.count
           }.by(1)
         end
@@ -403,11 +403,11 @@ RSpec.describe Task, type: :model do
             expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Pivotal./
             task.save
           end
-          
+
           it 'should still create the task' do
-            expect {
+            expect do
               task.save
-            }.to change {
+            end.to change {
               Task.count
             }.by(1)
           end

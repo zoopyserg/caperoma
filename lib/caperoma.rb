@@ -375,7 +375,7 @@ class Caperoma
         project.create_meetings_in_pivotal_as_chores = create_meetings_in_pivotal_as_chores
         project.save
 
-        pivotal_data = self.get_pivotal_data(pivotal_id)
+        pivotal_data = get_pivotal_data(pivotal_id)
         title ||= pivotal_data[:title]
         description ||= pivotal_data[:description]
         pivotal_id = pivotal_data[:pivotal_id]
@@ -447,7 +447,6 @@ class Caperoma
     end
 
     resulting_hash
-
   rescue Faraday::ConnectionFailed
     puts 'Connection failed. Performing the task without requests to Pivotal.'
     resulting_hash
