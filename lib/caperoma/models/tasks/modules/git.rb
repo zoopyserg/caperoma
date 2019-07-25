@@ -10,7 +10,10 @@ module Git
   end
 
   def git_push
+    Faraday.get('https://api.github.com')
     `git -C "#{project.folder_path}" push --set-upstream origin #{git_current_branch}` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without pushing to Git.'
   end
 
   def git_last_commit_name
@@ -55,10 +58,19 @@ module Git
 
       `git -C "#{project.folder_path}" add -A && git -C "#{project.folder_path}" stash` if changes_were_made
 
-      `git -C "#{project.folder_path}" fetch && git -C "#{project.folder_path}" rebase $(git -C "#{project.folder_path}" rev-parse --abbrev-ref --symbolic-full-name @{u})`
+      git_actual_rebase
 
       `git -C "#{project.folder_path}" stash apply` if changes_were_made
     end
+  end
+
+  def git_actual_rebase
+    if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
+      Faraday.get('https://api.github.com')
+      `git -C "#{project.folder_path}" fetch && git -C "#{project.folder_path}" rebase $(git -C "#{project.folder_path}" rev-parse --abbrev-ref --symbolic-full-name @{u})`
+    end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without pulling the latest code from Git.'
   end
 
   def git_checkout(_branch)
