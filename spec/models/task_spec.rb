@@ -54,6 +54,12 @@ RSpec.describe Task, type: :model do
   end
 
   describe 'class_methods' do
+    let!(:account) { create :account, type: '--jira' }
+    let(:faraday) { double('Faraday', post: response) }
+    let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200) }
+
+    before { expect(Faraday).to receive(:new).and_return faraday }
+
     describe '::finish_started' do
       let!(:started) { create :task, finished_at: nil }
 
@@ -97,7 +103,7 @@ RSpec.describe Task, type: :model do
 
   describe 'methods' do
     context 'pivotal_id present' do
-      let!(:task) { create :task, finished_at: nil, pivotal_id: '12345678' }
+      let!(:task) { create :task, finished_at: nil, pivotal_id: '12345678', additional_time: 5 }
       describe '#finish' do
         it 'should finish it and log time' do
           expect(task).to receive :close_issue_on_jira
@@ -140,7 +146,7 @@ RSpec.describe Task, type: :model do
     end
 
     context 'pivotal_id blank' do
-      let!(:task) { create :task, finished_at: nil, pivotal_id: nil }
+      let!(:task) { create :task, finished_at: nil, pivotal_id: nil, additional_time: 5 }
       describe '#finish' do
         it 'should finish it and log time' do
           expect(task).to receive :close_issue_on_jira
@@ -224,7 +230,7 @@ RSpec.describe Task, type: :model do
         let(:task) { create :task }
         let!(:account) { create :account, type: '--jira' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200) }
 
         it 'should create task in Jira after create' do
           expect(Faraday).to receive(:new).and_return faraday
@@ -243,7 +249,7 @@ RSpec.describe Task, type: :model do
         let(:task) { create :task }
         let!(:account) { create :account, type: '--jira' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200) }
 
         before do
           expect(Faraday).to receive(:new).and_return faraday
@@ -266,10 +272,141 @@ RSpec.describe Task, type: :model do
         end
       end
 
+      context 'jira account present but the returned status was "forbidden"' do
+        let(:task) { create :task, jira_key: nil }
+        let!(:account) { create :account, type: '--jira' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 401, reason_phrase: "not authorized") }
+
+        before do
+          expect(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_return response
+          allow(faraday).to receive(:get).and_return response
+          allow(faraday).to receive(:put).and_return response
+        end
+
+        it 'give an error that there is no connection' do
+          expect(STDOUT).to receive(:puts).with /Forbidden access/
+          task.save
+        end
+
+        it 'should still create the task' do
+          expect do
+            task.save
+          end.to change {
+            Task.count
+          }.by(1)
+        end
+
+        it 'should keep jira_key blank' do
+          task.save
+          expect(task.reload.jira_key).to be_nil
+        end
+      end
+
+      context 'jira account present but the returned status was "forbidden"' do
+        let(:task) { create :task, jira_key: nil }
+        let!(:account) { create :account, type: '--jira' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 403, reason_phrase: "not authorized") }
+
+        before do
+          expect(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_return response
+          allow(faraday).to receive(:get).and_return response
+          allow(faraday).to receive(:put).and_return response
+        end
+
+        it 'give an error that there is no connection' do
+          expect(STDOUT).to receive(:puts).with /Forbidden access/
+          task.save
+        end
+
+        it 'should still create the task' do
+          expect do
+            task.save
+          end.to change {
+            Task.count
+          }.by(1)
+        end
+
+        it 'should keep jira_key blank' do
+          task.save
+          expect(task.reload.jira_key).to be_nil
+        end
+      end
+
+      context 'jira account present but the returned status was "not found"' do
+        let(:task) { create :task, jira_key: nil }
+        let!(:account) { create :account, type: '--jira' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 404, reason_phrase: "not found") }
+
+        before do
+          expect(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_return response
+          allow(faraday).to receive(:get).and_return response
+          allow(faraday).to receive(:put).and_return response
+        end
+
+        it 'give an error that there is no connection' do
+          expect(STDOUT).to receive(:puts).with /Not found/
+          task.save
+        end
+
+        it 'should still create the task' do
+          expect do
+            task.save
+          end.to change {
+            Task.count
+          }.by(1)
+        end
+
+        it 'should keep jira_key blank' do
+          task.save
+          expect(task.reload.jira_key).to be_nil
+        end
+      end
+
+      context 'jira account present but the returned status was unknown error' do
+        let(:task) { create :task, jira_key: nil }
+        let!(:account) { create :account, type: '--jira' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 500, reason_phrase: "server error") }
+
+        before do
+          expect(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_return response
+          allow(faraday).to receive(:get).and_return response
+          allow(faraday).to receive(:put).and_return response
+        end
+
+        it 'give an error that there is no connection' do
+          expect(STDOUT).to receive(:puts).with /Could not/
+          expect(STDOUT).to receive(:puts).with /500/
+          expect(STDOUT).to receive(:puts).with /server error/
+
+          task.save
+        end
+
+        it 'should still create the task' do
+          expect do
+            task.save
+          end.to change {
+            Task.count
+          }.by(1)
+        end
+
+        it 'should keep jira_key blank' do
+          task.save
+          expect(task.reload.jira_key).to be_nil
+        end
+      end
+
       context 'jira account not present' do
         let(:task) { create :task }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200) }
 
         it 'should not create task in Jira after create' do
           allow(Faraday).to receive(:new).and_return faraday
@@ -298,7 +435,7 @@ RSpec.describe Task, type: :model do
         let!(:account) { create :account, type: '--jira' }
         let!(:jira_key) { 'OK-1' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200) }
 
         before do
           allow(Faraday).to receive(:new).and_return faraday
@@ -311,6 +448,65 @@ RSpec.describe Task, type: :model do
           expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Jira./
           task.save
         end
+      end
+
+      describe 'error codes', :unstub_jira_starting  do
+        let!(:account) { create :account, type: '--jira' }
+        let!(:jira_key) { 'OK-1' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: status, reason_phrase: reason_phrase) }
+        let(:status) { 200 }
+        let(:reason_phrase) { 'OK' }
+
+        before do
+          allow(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_return response
+          allow(faraday).to receive(:get).and_return response
+          allow(faraday).to receive(:put).and_return response
+        end
+
+        context 'jira id present, account present, but server gave "unouthorized" error' do
+          let(:status) { 401 }
+          let(:reason_phrase) { 'unauthorized' }
+
+          it 'should say it could not start' do
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.save
+          end
+        end
+
+        context 'jira id present, account present, but server gave "unouthorized" error' do
+          let(:status) { 403 }
+          let(:reason_phrase) { 'unauthorized' }
+
+          it 'should say it could not start' do
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.save
+          end
+        end
+
+        context 'jira id present, account present, but server gave "not found" error' do
+          let(:status) { 404 }
+          let(:reason_phrase) { 'not found' }
+
+          it 'should say it could not start' do
+            expect(STDOUT).to receive(:puts).with /not found/
+            task.save
+          end
+        end
+
+        context 'jira id present, account present, but server gave "unknown" error' do
+          let(:status) { 500 }
+          let(:reason_phrase) { 'server error' }
+
+          it 'should say it could not start' do
+            expect(STDOUT).to receive(:puts).with /Could not/
+            expect(STDOUT).to receive(:puts).with /500/
+            expect(STDOUT).to receive(:puts).with /server error/
+            task.save
+          end
+        end
+
       end
 
       context 'account not present, jira id not present' do
@@ -350,7 +546,9 @@ RSpec.describe Task, type: :model do
         let(:task) { build :task, pivotal_id: pt_id }
         let!(:account) { create :account, type: '--pivotal' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: PIVOTAL_ISSUE_CREATION_RESPONSE) }
+        let(:response) { double('Faraday', body: PIVOTAL_ISSUE_CREATION_RESPONSE, status: status, reason_phrase: reason_phrase) }
+        let(:status) { 200 }
+        let(:reason_phrase) { 'OK' }
 
         before { allow(task).to receive(:this_is_a_type_a_user_wants_to_create?).and_return(should_create) }
 
@@ -439,12 +637,155 @@ RSpec.describe Task, type: :model do
             end
           end
         end
+
+        context 'PT id blank and should create but got "unauthorized error' do
+          let(:pt_id) { nil }
+          let(:should_create) { true }
+          let(:status) { 401 }
+          let(:reason_phrase) { 'unauthorized' }
+
+          before do
+            allow(Faraday).to receive(:new).and_return faraday
+            allow(faraday).to receive(:post).and_return response
+            allow(faraday).to receive(:get).and_return response
+            allow(faraday).to receive(:put).and_return response
+          end
+
+          it 'should create task in Pivotal' do
+            expect do
+              task.save
+            end.to change {
+              Task.count
+            }.by(1)
+          end
+
+          it 'should keep pivotal id blank' do
+            task.save
+            task.reload.tap do |task|
+              expect(task.pivotal_id).to eq nil
+            end
+          end
+
+          it 'should say it got an error' do
+            expect(STDOUT).to receive(:puts).with /No access/
+
+            task.save
+          end
+        end
+
+        context 'PT id blank and should create but got "unauthorized error' do
+          let(:pt_id) { nil }
+          let(:should_create) { true }
+          let(:status) { 403 }
+          let(:reason_phrase) { 'unauthorized' }
+
+          before do
+            allow(Faraday).to receive(:new).and_return faraday
+            allow(faraday).to receive(:post).and_return response
+            allow(faraday).to receive(:get).and_return response
+            allow(faraday).to receive(:put).and_return response
+          end
+
+          it 'should create task in Pivotal' do
+            expect do
+              task.save
+            end.to change {
+              Task.count
+            }.by(1)
+          end
+
+          it 'should keep pivotal id blank' do
+            task.save
+            task.reload.tap do |task|
+              expect(task.pivotal_id).to eq nil
+            end
+          end
+
+          it 'should say it got an error' do
+            expect(STDOUT).to receive(:puts).with /No access/
+
+            task.save
+          end
+        end
+
+        context 'PT id blank and should create but got "not found" error' do
+          let(:pt_id) { nil }
+          let(:should_create) { true }
+          let(:status) { 404 }
+          let(:reason_phrase) { 'unauthorized' }
+
+          before do
+            allow(Faraday).to receive(:new).and_return faraday
+            allow(faraday).to receive(:post).and_return response
+            allow(faraday).to receive(:get).and_return response
+            allow(faraday).to receive(:put).and_return response
+          end
+
+          it 'should create task in Pivotal' do
+            expect do
+              task.save
+            end.to change {
+              Task.count
+            }.by(1)
+          end
+
+          it 'should keep pivotal id blank' do
+            task.save
+            task.reload.tap do |task|
+              expect(task.pivotal_id).to eq nil
+            end
+          end
+
+          it 'should say it got an error' do
+            expect(STDOUT).to receive(:puts).with /not found/
+
+            task.save
+          end
+        end
+
+        context 'PT id blank and should create but got "some other" error' do
+          let(:pt_id) { nil }
+          let(:should_create) { true }
+          let(:status) { 500 }
+          let(:reason_phrase) { 'server error' }
+
+          before do
+            allow(Faraday).to receive(:new).and_return faraday
+            allow(faraday).to receive(:post).and_return response
+            allow(faraday).to receive(:get).and_return response
+            allow(faraday).to receive(:put).and_return response
+          end
+
+          it 'should create task in Pivotal' do
+            expect do
+              task.save
+            end.to change {
+              Task.count
+            }.by(1)
+          end
+
+          it 'should keep pivotal id blank' do
+            task.save
+            task.reload.tap do |task|
+              expect(task.pivotal_id).to eq nil
+            end
+          end
+
+          it 'should say it got an error' do
+            expect(STDOUT).to receive(:puts).with /Could not/
+            expect(STDOUT).to receive(:puts).with /500/
+            expect(STDOUT).to receive(:puts).with /server error/
+
+            task.save
+          end
+        end
+
       end
 
       context 'pivotal account blank' do
         let(:task) { build :task, pivotal_id: pt_id }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: PIVOTAL_ISSUE_CREATION_RESPONSE) }
+        let(:response) { double('Faraday', body: PIVOTAL_ISSUE_CREATION_RESPONSE, status: 200) }
 
         before { allow(task).to receive(:this_is_a_type_a_user_wants_to_create?).and_return(should_create) }
 
@@ -521,7 +862,7 @@ RSpec.describe Task, type: :model do
         let(:pivotal_id) { '12345678' }
         let!(:account) { create :account, type: '--pivotal' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: PIVOTAL_ISSUE_CREATION_RESPONSE) }
+        let(:response) { double('Faraday', body: PIVOTAL_ISSUE_CREATION_RESPONSE, status: 200) }
 
         before do
           allow(Faraday).to receive(:new).and_return faraday
@@ -534,6 +875,65 @@ RSpec.describe Task, type: :model do
           expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Pivotal./
           task.save
         end
+      end
+
+      describe 'error codes', :unstub_pivotal_starting do
+        let(:pivotal_id) { '12345678' }
+        let!(:account) { create :account, type: '--pivotal' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: PIVOTAL_ISSUE_CREATION_RESPONSE, status: status, reason_phrase: reason_phrase) }
+        let(:status) { 200 }
+        let(:reason_phrase) { 'OK' }
+
+        before do
+          allow(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_return response
+          allow(faraday).to receive(:get).and_return response
+          allow(faraday).to receive(:put).and_return response
+        end
+
+        context 'pt id present, pt account present, "unauthorized" server error' do
+          let(:status) { 401 }
+          let(:reason_phrase) { 'unauth' }
+
+          it 'should give the no auth error' do
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.save
+          end
+        end
+
+        context 'pt id present, pt account present, "unauthorized" server error' do
+          let(:status) { 403 }
+          let(:reason_phrase) { 'unauth' }
+
+          it 'should give the no auth error' do
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.save
+          end
+        end
+
+        context 'pt id present, pt account present, "not found" server error' do
+          let(:status) { 404 }
+          let(:reason_phrase) { 'not found' }
+
+          it 'should give the not found error' do
+            expect(STDOUT).to receive(:puts).with /not found/
+            task.save
+          end
+        end
+
+        context 'pt id present, pt account present, "unknown" server error' do
+          let(:status) { 500 }
+          let(:reason_phrase) { 'error' }
+
+          it 'should give the error' do
+            expect(STDOUT).to receive(:puts).with /Could not/
+            expect(STDOUT).to receive(:puts).with /500/
+            expect(STDOUT).to receive(:puts).with /error/
+            task.save
+          end
+        end
+
       end
 
       context 'pt id blank, pt account present' do
@@ -636,6 +1036,82 @@ RSpec.describe Task, type: :model do
       end
     end
 
+    describe '::close_issue_on_jira' do
+      let(:task) { build :task, jira_key: jira_key }
+
+      let!(:account) { create :account, type: '--jira' }
+      let!(:jira_key) { 'OK-1' }
+      let(:faraday) { double('Faraday', post: response) }
+      let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: status, reason_phrase: reason_phrase) }
+      let(:status) { 200 }
+      let(:reason_phrase) { 'OK' }
+
+      before { allow(Faraday).to receive(:new).and_return faraday }
+
+      context 'no internet connection' do
+        before do
+          allow(faraday).to receive(:post).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:get).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:put).and_raise Faraday::ConnectionFailed, [404]
+        end
+
+        it 'should give the no connection error' do
+          expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Jira./
+          task.send(:close_issue_on_jira)
+        end
+      end
+
+      describe 'error codes', :unstub_jira_starting  do
+        before do
+          allow(faraday).to receive(:post).and_return response
+          allow(faraday).to receive(:get).and_return response
+          allow(faraday).to receive(:put).and_return response
+        end
+
+        context 'server gave "unouthorized" error' do
+          let(:status) { 401 }
+          let(:reason_phrase) { 'unauthorized' }
+
+          it 'should say it could not start' do
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.send(:close_issue_on_jira)
+          end
+        end
+
+        context 'server gave "unouthorized" error' do
+          let(:status) { 403 }
+          let(:reason_phrase) { 'unauthorized' }
+
+          it 'should say it could not start' do
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.send(:close_issue_on_jira)
+          end
+        end
+
+        context 'server gave "not found" error' do
+          let(:status) { 404 }
+          let(:reason_phrase) { 'not found' }
+
+          it 'should say it could not start' do
+            expect(STDOUT).to receive(:puts).with /not found/
+            task.send(:close_issue_on_jira)
+          end
+        end
+
+        context 'server gave "unknown" error' do
+          let(:status) { 500 }
+          let(:reason_phrase) { 'server error' }
+
+          it 'should say it could not finish' do
+            expect(STDOUT).to receive(:puts).with /Could not/
+            expect(STDOUT).to receive(:puts).with /500/
+            expect(STDOUT).to receive(:puts).with /server error/
+            task.send(:close_issue_on_jira)
+          end
+        end
+      end
+    end
+
     describe '#log_work_to_jira_data' do
       let!(:task) { create :task }
 
@@ -653,13 +1129,13 @@ RSpec.describe Task, type: :model do
     end
 
     describe '#log_work_to_jira' do
-      let!(:task) { create :task, jira_key: jira_key }
+      let(:task) { build :task, jira_key: jira_key }
 
       context 'no internet connection' do
         let!(:account) { create :account, type: '--jira' }
-        let!(:jira_key) { 'OK-1' }
+        let(:jira_key) { 'OK-1' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200) }
 
         before do
           allow(Faraday).to receive(:new).and_return faraday
@@ -669,9 +1145,73 @@ RSpec.describe Task, type: :model do
         end
 
         it 'should give the no connection error', :unstub_jira_starting do
+          task.save
           expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Jira./
           task.send(:log_work_to_jira)
         end
+      end
+
+      describe 'errors', :unstub_jira_starting do
+        let!(:account) { create :account, type: '--jira' }
+        let(:jira_key) { 'OK-1' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: status, reason_phrase: reason_phrase) }
+        let(:status) { 200 }
+        let(:reason_phrase) { 'OK' }
+
+        before do
+          allow(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_return response
+          allow(faraday).to receive(:get).and_return response
+          allow(faraday).to receive(:put).and_return response
+        end
+
+        context 'server gave the "unauth" error' do
+          let(:status) { 401 }
+          let(:reason_phrase) { 'unauth' }
+
+          it 'should give the "unauth" error' do
+            task.save
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.send(:log_work_to_jira)
+          end
+        end
+
+        context 'server gave the "unauth" error' do
+          let(:status) { 403 }
+          let(:reason_phrase) { 'unauth' }
+
+          it 'should give the "unauth" error' do
+            task.save
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.send(:log_work_to_jira)
+          end
+        end
+
+        context 'server gave the "not found" error' do
+          let(:status) { 404 }
+          let(:reason_phrase) { 'not found' }
+
+          it 'should give the "unauth" error' do
+            task.save
+            expect(STDOUT).to receive(:puts).with /not found/
+            task.send(:log_work_to_jira)
+          end
+        end
+
+        context 'server gave the "unknown" error' do
+          let(:status) { 500 }
+          let(:reason_phrase) { 'unknown' }
+
+          it 'should give the "unknown" error' do
+            task.save
+            expect(STDOUT).to receive(:puts).with /Could not/
+            expect(STDOUT).to receive(:puts).with /500/
+            expect(STDOUT).to receive(:puts).with /unknown/
+            task.send(:log_work_to_jira)
+          end
+        end
+
       end
     end
 
@@ -698,6 +1238,81 @@ RSpec.describe Task, type: :model do
         result = task.send(:finish_on_pivotal_data)
         JSON.parse(result).tap do |format|
           expect(format['current_state']).to eq 'finished'
+        end
+      end
+    end
+
+    describe '#finish_on_pivotal' do
+      let(:task) { build :task, pivotal_id: pivotal_id }
+      let(:pivotal_id) { '12345678' }
+      let!(:account) { create :account, type: '--pivotal' }
+      let(:faraday) { double('Faraday', post: response) }
+      let(:response) { double('Faraday', body: PIVOTAL_ISSUE_CREATION_RESPONSE, status: status, reason_phrase: reason_phrase) }
+      let(:status) { 200 }
+      let(:reason_phrase) { 'OK' }
+
+      before { allow(Faraday).to receive(:new).and_return faraday }
+
+      context 'pt id present, pt account present, no internet connection' do
+        before do
+          allow(faraday).to receive(:post).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:get).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:put).and_raise Faraday::ConnectionFailed, [404]
+        end
+
+        it 'should give the no connection error', :unstub_pivotal_starting do
+          expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Pivotal./
+          task.send(:finish_on_pivotal)
+        end
+      end
+
+      describe 'error codes', :unstub_pivotal_starting do
+        before do
+          allow(faraday).to receive(:post).and_return response
+          allow(faraday).to receive(:get).and_return response
+          allow(faraday).to receive(:put).and_return response
+        end
+
+        context 'pt id present, pt account present, "unauthorized" server error' do
+          let(:status) { 401 }
+          let(:reason_phrase) { 'unauth' }
+
+          it 'should give the no auth error' do
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.send(:finish_on_pivotal)
+          end
+        end
+
+        context 'pt id present, pt account present, "unauthorized" server error' do
+          let(:status) { 403 }
+          let(:reason_phrase) { 'unauth' }
+
+          it 'should give the no auth error' do
+            expect(STDOUT).to receive(:puts).with /No access/
+            task.send(:finish_on_pivotal)
+          end
+        end
+
+        context 'pt id present, pt account present, "not found" server error' do
+          let(:status) { 404 }
+          let(:reason_phrase) { 'not found' }
+
+          it 'should give the not found error' do
+            expect(STDOUT).to receive(:puts).with /not found/
+            task.send(:finish_on_pivotal)
+          end
+        end
+
+        context 'pt id present, pt account present, "unknown" server error' do
+          let(:status) { 500 }
+          let(:reason_phrase) { 'error' }
+
+          it 'should give the error' do
+            expect(STDOUT).to receive(:puts).with /Could not/
+            expect(STDOUT).to receive(:puts).with /500/
+            expect(STDOUT).to receive(:puts).with /error/
+            task.send(:finish_on_pivotal)
+          end
         end
       end
     end

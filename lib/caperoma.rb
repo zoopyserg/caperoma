@@ -163,6 +163,7 @@ class Caperoma
       if capedata
         jira_url = capedata['jira_url']
         if jira_url
+          puts 'Receiving issue types'
           conn = Faraday.new(url: jira_url) do |c|
             c.basic_auth(Account.jira.email, Account.jira.password)
             c.adapter Faraday.default_adapter
@@ -175,12 +176,23 @@ class Caperoma
             request.headers['Content-Type'] = 'application/json'
           end
 
-          puts 'Received these issue types:'
+          case response.status
+          when 200, 201, 202, 204, 301, 302, 303, 304, 307
+            puts 'Received these issue types:'
 
-          result = JSON.parse(response.body)
+            result = JSON.parse(response.body)
 
-          result.each do |item|
-            puts "ID: #{item['id']}, Name: #{item['name']}"
+            result.each do |item|
+              puts "ID: #{item['id']}, Name: #{item['name']}"
+            end
+          when 401, 403
+            puts "No access Jira. Maybe login or api_key are incorrect."
+          when 404
+            puts "Resource not found. Maybe Jira ID is incorrect."
+          else
+            puts 'Could not get data from Jira.'
+            puts "Error status: #{response.status}"
+            puts "Message from server: #{response.reason_phrase}"
           end
         else
           puts 'Please put at least jira url into your Capefile'
@@ -207,7 +219,7 @@ class Caperoma
           jira_project_id = capedata['jira_project_id']
 
           if jira_project_id
-            # get issues for the project
+            puts 'Receiving an issue to get transition ids:'
 
             conn = Faraday.new(url: jira_url) do |c|
               c.basic_auth(Account.jira.email, Account.jira.password)
@@ -220,30 +232,54 @@ class Caperoma
               request.headers['Content-Type'] = 'application/json'
             end
 
-            issues = JSON.parse(response.body)['issues']
+            case response.status
+            when 200, 201, 202, 204, 301, 302, 303, 304, 307
+              
+              issues = JSON.parse(response.body)['issues']
 
-            if !issues.empty?
-              first_issue = issues[0]
-              first_issue_key = first_issue['key']
+              if !issues.empty?
+                first_issue = issues[0]
+                first_issue_key = first_issue['key']
 
-              conn2 = Faraday.new(url: jira_url) do |c|
-                c.basic_auth(Account.jira.email, Account.jira.password)
-                c.adapter Faraday.default_adapter
+                conn2 = Faraday.new(url: jira_url) do |c|
+                  c.basic_auth(Account.jira.email, Account.jira.password)
+                  c.adapter Faraday.default_adapter
+                end
+
+                response2 = conn2.get do |request|
+                  request.url "rest/api/3/issue/#{first_issue_key}/transitions"
+                  request.headers['User-Agent'] = 'Caperoma'
+                  request.headers['Content-Type'] = 'application/json'
+                end
+
+                case response2.status
+                when 200, 201, 202, 204, 301, 302, 303, 304, 307
+                  puts 'Received these transitions:'
+                  transitions = JSON.parse(response.body)['transitions']
+
+                  transitions.each do |transition|
+                    pp "Name: #{transition['name']}, id: #{transition['id']}"
+                  end
+                when 401, 403
+                  puts "No access Jira. Maybe login or api_key are incorrect."
+                when 404
+                  puts "Resource not found. Maybe Jira ID is incorrect."
+                else
+                  puts 'Could not get data from Jira.'
+                  puts "Error status: #{response2.status}"
+                  puts "Message from server: #{response2.reason_phrase}"
+                end
+              else
+                puts 'Please create at least one issue in this project manually in the browser.'
               end
-
-              response = conn2.get do |request|
-                request.url "rest/api/3/issue/#{first_issue_key}/transitions"
-                request.headers['User-Agent'] = 'Caperoma'
-                request.headers['Content-Type'] = 'application/json'
-              end
-
-              transitions = JSON.parse(response.body)['transitions']
-
-              transitions.each do |transition|
-                pp "Name: #{transition['name']}, id: #{transition['id']}"
-              end
+            when 401, 403
+              puts "No access Jira. Maybe login or api_key are incorrect."
+            when 404
+              puts "Resource not found. Maybe Jira ID is incorrect."
             else
-              puts 'Please create at least one issue in this project manually in the browser.'
+              puts 'Could not get data from Jira.'
+              puts "Error status: #{response.status}"
+              puts "Message from server: #{response.reason_phrase}"
             end
           else
             puts 'Please put jira_project_id into your Capefile'
@@ -430,10 +466,23 @@ class Caperoma
             request.headers['X-TrackerToken'] = Account.pivotal.password
           end
 
-          result = JSON.parse response.body
+          case response.status
+          when 200, 201, 202, 204, 301, 302, 303, 304, 307
+            result = JSON.parse response.body
 
-          resulting_hash[:title] = result['name']
-          resulting_hash[:description] = result['description']
+            resulting_hash[:title] = result['name']
+            resulting_hash[:description] = result['description']
+          when 401, 403
+            puts "No access Pivotal. Maybe login or api_key are incorrect."
+          when 404
+            puts "Resource not found. Maybe Pivotal ID is incorrect."
+          else
+            puts 'Could not get data from Pivotal.'
+            puts "Error status: #{response.status}"
+            puts "Message from server: #{response.reason_phrase}"
+          end
+
+          resulting_hash
         else
           puts 'Pivotal ID needs to be copied from the task in Pivotal (in either 12345678 or #12345678 format).'
           puts "Pivotal ID you entered was #{pivotal_id}, which does not match the allowed format."
@@ -528,7 +577,7 @@ class Caperoma
     when /^(remove|delete|--remove|--delete|-d|-r)$/
       Account.where(type: argv[2]).destroy_all
     when nil
-      Account.all.each { |x| puts "#{x.type[2..-1].capitalize}: #{x.email}" }
+      Account.all.each { |x| puts "#{x.type[2..-1].capitalize}: #{x.email} #{x.password} #{x.username}" }
       puts ''
       puts 'to delete run "caperoma accounts remove "--<type>"'
       puts 'to update run "... accounts --add "--<type>" again'

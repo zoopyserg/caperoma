@@ -88,15 +88,15 @@ describe Caperoma do
       let(:response_body) { { 'name' => 'awesome bug', 'description' => 'some description' }.to_json }
 
       it 'should create' do
-        faraday = spy('faraday')
-        response = spy('response')
+        response = double('Faraday', body: response_body, status: 200)
+        faraday = double('Faraday', post: response)
 
         allow(Faraday).to receive(:new).and_return faraday
         allow(Faraday).to receive(:default_adapter)
+
+        allow(faraday).to receive(:post).and_return response
         allow(faraday).to receive(:get).and_return response
-        allow(response).to receive(:body).and_return response_body
-        allow(faraday).to receive(:post)
-        allow(faraday).to receive(:put)
+        allow(faraday).to receive(:put).and_return response
 
         expect do
           Caperoma.create_task(args)
@@ -116,15 +116,15 @@ describe Caperoma do
       let(:response_body) { { 'name' => 'awesome bug', 'description' => 'some description' }.to_json }
 
       it 'should create the same way as it does without #' do
-        faraday = spy('faraday')
-        response = spy('response')
+        response = double('Faraday', body: response_body, status: 200)
+        faraday = double('Faraday', post: response)
 
         allow(Faraday).to receive(:new).and_return faraday
         allow(Faraday).to receive(:default_adapter)
+
+        allow(faraday).to receive(:post).and_return response
         allow(faraday).to receive(:get).and_return response
-        allow(response).to receive(:body).and_return response_body
-        allow(faraday).to receive(:post)
-        allow(faraday).to receive(:put)
+        allow(faraday).to receive(:put).and_return response
 
         expect do
           Caperoma.create_task(args)

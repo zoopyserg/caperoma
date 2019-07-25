@@ -1,9 +1,10 @@
 # frozen_string_literal: true
-
 ENV['CAPEROMA_TEST'] = 'true'
 
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib', 'models'))
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib', 'models', 'tasks'))
+$LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib', 'models', 'tasks', 'modules'))
 $LOAD_PATH.unshift(File.dirname(__FILE__))
 
 require 'caperoma'
