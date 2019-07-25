@@ -255,7 +255,7 @@ class Caperoma
                 case response2.status
                 when 200, 201, 202, 204, 301, 302, 303, 304, 307
                   puts 'Received these transitions:'
-                  transitions = JSON.parse(response.body)['transitions']
+                  transitions = JSON.parse(response2.body)['transitions']
 
                   transitions.each do |transition|
                     pp "Name: #{transition['name']}, id: #{transition['id']}"
@@ -521,8 +521,23 @@ class Caperoma
             request.headers['Content-Type'] = 'application/json'
           end
 
-          JSON.parse(response.body).each do |project|
-            pp "Name: #{project['name']}, jira_project_id: #{project['id']}"
+          case response.status
+          when 200, 201, 202, 204, 301, 302, 303, 304, 307
+            puts 'Received these projects'
+
+            result = JSON.parse(response.body)
+
+            result.each do |project|
+              pp "Name: #{project['name']}, jira_project_id: #{project['id']}"
+            end
+          when 401, 403
+            puts 'No access Jira. Maybe login or api_key are incorrect.'
+          when 404
+            puts 'Resource not found. Maybe Jira ID is incorrect.'
+          else
+            puts 'Could not get data from Jira.'
+            puts "Error status: #{response.status}"
+            puts "Message from server: #{response.reason_phrase}"
           end
         else
           puts 'Please put at least jira url into your Capefile'
@@ -533,6 +548,8 @@ class Caperoma
     else
       puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed.'
   end
 
   def self.manage_recipients(argv)
