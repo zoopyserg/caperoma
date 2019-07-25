@@ -3,7 +3,7 @@
 module Git
   def git_branch
     puts 'using this branch:'
-    puts self.branch
+    puts branch
     `git -C "#{project.folder_path}" checkout -b #{branch}` if enable_git?
   end
 
@@ -31,7 +31,7 @@ module Git
       when 200, 201, 202, 204, 301, 302, 303, 304, 307
         `git -C "#{project.folder_path}" push --set-upstream origin #{git_current_branch}`
       when 401, 403
-        puts "No access to Git. Maybe login or password are incorrect."
+        puts 'No access to Git. Maybe login or password are incorrect.'
       when 404
         puts "A resource on Git was not found. Maybe the repository name #{project.github_repo} is incorrect."
       else
@@ -79,7 +79,7 @@ module Git
     when 200, 201, 202, 204, 301, 302, 303, 304, 307
       puts 'The pull request was sent.'
     when 401, 403
-      puts "No access to Git. Maybe login or password are incorrect."
+      puts 'No access to Git. Maybe login or password are incorrect.'
     when 404
       puts "A resource on Git not found. Maybe the repository name #{project.github_repo} is incorrect."
     else
@@ -127,7 +127,7 @@ module Git
       when 200, 201, 202, 204, 301, 302, 303, 304, 307
         `git -C "#{project.folder_path}" fetch && git -C "#{project.folder_path}" rebase $(git -C "#{project.folder_path}" rev-parse --abbrev-ref --symbolic-full-name @{u})`
       when 401, 403
-        puts "No access to Git. Maybe login or password are incorrect."
+        puts 'No access to Git. Maybe login or password are incorrect.'
       when 404
         puts "A resource on Git not found. Maybe the repository name #{project.github_repo} is incorrect."
       else

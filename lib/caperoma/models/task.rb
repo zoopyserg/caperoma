@@ -310,7 +310,7 @@ class Task < ActiveRecord::Base
         c.basic_auth(Account.jira.email, Account.jira.password)
         c.adapter Faraday.default_adapter
       end
-      
+
       response = conn.post do |request|
         request.url "rest/api/3/issue/#{jira_key}/transitions"
         request.body = close_issue_on_jira_data

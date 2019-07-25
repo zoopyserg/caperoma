@@ -276,7 +276,7 @@ RSpec.describe Task, type: :model do
         let(:task) { create :task, jira_key: nil }
         let!(:account) { create :account, type: '--jira' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 401, reason_phrase: "not authorized") }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 401, reason_phrase: 'not authorized') }
 
         before do
           expect(Faraday).to receive(:new).and_return faraday
@@ -308,7 +308,7 @@ RSpec.describe Task, type: :model do
         let(:task) { create :task, jira_key: nil }
         let!(:account) { create :account, type: '--jira' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 403, reason_phrase: "not authorized") }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 403, reason_phrase: 'not authorized') }
 
         before do
           expect(Faraday).to receive(:new).and_return faraday
@@ -340,7 +340,7 @@ RSpec.describe Task, type: :model do
         let(:task) { create :task, jira_key: nil }
         let!(:account) { create :account, type: '--jira' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 404, reason_phrase: "not found") }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 404, reason_phrase: 'not found') }
 
         before do
           expect(Faraday).to receive(:new).and_return faraday
@@ -372,7 +372,7 @@ RSpec.describe Task, type: :model do
         let(:task) { create :task, jira_key: nil }
         let!(:account) { create :account, type: '--jira' }
         let(:faraday) { double('Faraday', post: response) }
-        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 500, reason_phrase: "server error") }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 500, reason_phrase: 'server error') }
 
         before do
           expect(Faraday).to receive(:new).and_return faraday
@@ -450,7 +450,7 @@ RSpec.describe Task, type: :model do
         end
       end
 
-      describe 'error codes', :unstub_jira_starting  do
+      describe 'error codes', :unstub_jira_starting do
         let!(:account) { create :account, type: '--jira' }
         let!(:jira_key) { 'OK-1' }
         let(:faraday) { double('Faraday', post: response) }
@@ -506,7 +506,6 @@ RSpec.describe Task, type: :model do
             task.save
           end
         end
-
       end
 
       context 'account not present, jira id not present' do
@@ -779,7 +778,6 @@ RSpec.describe Task, type: :model do
             task.save
           end
         end
-
       end
 
       context 'pivotal account blank' do
@@ -933,7 +931,6 @@ RSpec.describe Task, type: :model do
             task.save
           end
         end
-
       end
 
       context 'pt id blank, pt account present' do
@@ -1061,7 +1058,7 @@ RSpec.describe Task, type: :model do
         end
       end
 
-      describe 'error codes', :unstub_jira_starting  do
+      describe 'error codes', :unstub_jira_starting do
         before do
           allow(faraday).to receive(:post).and_return response
           allow(faraday).to receive(:get).and_return response
@@ -1211,7 +1208,6 @@ RSpec.describe Task, type: :model do
             task.send(:log_work_to_jira)
           end
         end
-
       end
     end
 

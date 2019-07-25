@@ -7,7 +7,7 @@ def help
   puts File.read(File.join(File.dirname(__FILE__), '..', 'HELP'))
 end
 
-def test_connection(_id= nil, _password = nil)
+def test_connection(_id = nil, _password = nil)
   # task = Task.where.not(pivotal_id: nil).where.not(jira_key: nil).last
   project = Project.first
   task = Task.new(jira_key: 'CAP-11', pivotal_id: '167498567', project_id: project.id)
@@ -18,10 +18,10 @@ def test_connection(_id= nil, _password = nil)
   end
 
   response = conn.get do |request|
-    request.url "services/v5/stories/#{_id ? _id : task.pivotal_id}"
+    request.url "services/v5/stories/#{_id || task.pivotal_id}"
     request.headers['User-Agent'] = 'Caperoma'
     request.headers['Content-Type'] = 'application/json'
-    request.headers['X-TrackerToken'] = _password ? _password : Account.pivotal.password
+    request.headers['X-TrackerToken'] = _password || Account.pivotal.password
   end
   pp response.status
   pp response.reason_phrase
@@ -30,16 +30,16 @@ def test_connection(_id= nil, _password = nil)
 
   pp 'jira'
   conn = Faraday.new(url: task.project.jira_url) do |c|
-    c.basic_auth(Account.jira.email, _password ? _password : Account.jira.password)
+    c.basic_auth(Account.jira.email, _password || Account.jira.password)
     c.adapter Faraday.default_adapter
   end
 
   response = conn.get do |request|
-    request.url "rest/api/3/issue/#{_id ? _id : task.jira_key}/transitions"
+    request.url "rest/api/3/issue/#{_id || task.jira_key}/transitions"
     request.headers['User-Agent'] = 'Caperoma'
     request.headers['Content-Type'] = 'application/json'
   end
-  
+
   pp response.status
   pp response.reason_phrase
   pp JSON.parse response.body
@@ -47,12 +47,12 @@ def test_connection(_id= nil, _password = nil)
 
   pp 'git'
   conn = Faraday.new(url: 'https://api.github.com') do |c|
-    c.basic_auth(Account.git.email, _password ? _password : Account.git.password)
+    c.basic_auth(Account.git.email, _password || Account.git.password)
     c.adapter Faraday.default_adapter
   end
 
   response = conn.get do |request|
-    request.url "/repos/#{_id ? _id : task.project.github_repo}/pulls"
+    request.url "/repos/#{_id || task.project.github_repo}/pulls"
     request.headers['User-Agent'] = 'Caperoma'
     request.headers['Accept'] = 'application/vnd.github.v3+json'
     request.headers['Content-Type'] = 'application/json'

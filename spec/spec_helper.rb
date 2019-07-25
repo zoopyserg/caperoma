@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 ENV['CAPEROMA_TEST'] = 'true'
 
 $LOAD_PATH.unshift(File.join(File.dirname(__FILE__), '..', 'lib'))

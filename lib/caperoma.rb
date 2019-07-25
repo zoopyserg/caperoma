@@ -186,9 +186,9 @@ class Caperoma
               puts "ID: #{item['id']}, Name: #{item['name']}"
             end
           when 401, 403
-            puts "No access Jira. Maybe login or api_key are incorrect."
+            puts 'No access Jira. Maybe login or api_key are incorrect.'
           when 404
-            puts "Resource not found. Maybe Jira ID is incorrect."
+            puts 'Resource not found. Maybe Jira ID is incorrect.'
           else
             puts 'Could not get data from Jira.'
             puts "Error status: #{response.status}"
@@ -234,7 +234,7 @@ class Caperoma
 
             case response.status
             when 200, 201, 202, 204, 301, 302, 303, 304, 307
-              
+
               issues = JSON.parse(response.body)['issues']
 
               if !issues.empty?
@@ -261,9 +261,9 @@ class Caperoma
                     pp "Name: #{transition['name']}, id: #{transition['id']}"
                   end
                 when 401, 403
-                  puts "No access Jira. Maybe login or api_key are incorrect."
+                  puts 'No access Jira. Maybe login or api_key are incorrect.'
                 when 404
-                  puts "Resource not found. Maybe Jira ID is incorrect."
+                  puts 'Resource not found. Maybe Jira ID is incorrect.'
                 else
                   puts 'Could not get data from Jira.'
                   puts "Error status: #{response2.status}"
@@ -273,9 +273,9 @@ class Caperoma
                 puts 'Please create at least one issue in this project manually in the browser.'
               end
             when 401, 403
-              puts "No access Jira. Maybe login or api_key are incorrect."
+              puts 'No access Jira. Maybe login or api_key are incorrect.'
             when 404
-              puts "Resource not found. Maybe Jira ID is incorrect."
+              puts 'Resource not found. Maybe Jira ID is incorrect.'
             else
               puts 'Could not get data from Jira.'
               puts "Error status: #{response.status}"
@@ -473,9 +473,9 @@ class Caperoma
             resulting_hash[:title] = result['name']
             resulting_hash[:description] = result['description']
           when 401, 403
-            puts "No access Pivotal. Maybe login or api_key are incorrect."
+            puts 'No access Pivotal. Maybe login or api_key are incorrect.'
           when 404
-            puts "Resource not found. Maybe Pivotal ID is incorrect."
+            puts 'Resource not found. Maybe Pivotal ID is incorrect.'
           else
             puts 'Could not get data from Pivotal.'
             puts "Error status: #{response.status}"
