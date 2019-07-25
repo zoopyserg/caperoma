@@ -191,6 +191,8 @@ class Caperoma
     else
       puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed.'
   end
 
   def self.get_jira_transition_ids
@@ -256,6 +258,8 @@ class Caperoma
     else
       puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed.'
   end
 
   def self.drop_db
@@ -371,38 +375,10 @@ class Caperoma
         project.create_meetings_in_pivotal_as_chores = create_meetings_in_pivotal_as_chores
         project.save
 
-        # get missing data from pivotal
-        if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
-          if pivotal_id.present?
-
-            if pivotal_id.match? /\d+/
-              conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
-                c.adapter Faraday.default_adapter
-              end
-
-              response = conn.get do |request|
-                request.url "services/v5/stories/#{pivotal_id}"
-                request.headers['User-Agent'] = 'Caperoma'
-                request.headers['Content-Type'] = 'application/json'
-                request.headers['X-TrackerToken'] = Account.pivotal.password
-              end
-
-              result = JSON.parse response.body
-
-              title ||= result['name']
-              description ||= result['description']
-
-            else
-              puts 'Pivotal ID needs to be copied from the task in Pivotal (in either 12345678 or #12345678 format).'
-              puts "Pivotal ID you entered was #{pivotal_id}, which does not match the allowed format."
-              puts 'Skipping usage of this ID.'
-              puts 'Proceeding as if Pivotal ID was not set.'
-              puts 'Please start/finish the needed task in Pivotal manually.'
-
-              pivotal_id = nil
-            end
-          end
-        end
+        pivotal_data = self.get_pivotal_data(pivotal_id)
+        title ||= pivotal_data[:title]
+        description ||= pivotal_data[:description]
+        pivotal_id = pivotal_data[:pivotal_id]
 
         if title
           record = nil
@@ -434,6 +410,47 @@ class Caperoma
     else
       puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
     end
+  end
+
+  def self.get_pivotal_data(pivotal_id)
+    resulting_hash = { title: nil, description: nil, pivotal_id: pivotal_id }
+
+    if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+      if pivotal_id.present?
+
+        if pivotal_id.match? /\d+/
+          conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
+            c.adapter Faraday.default_adapter
+          end
+
+          response = conn.get do |request|
+            request.url "services/v5/stories/#{pivotal_id}"
+            request.headers['User-Agent'] = 'Caperoma'
+            request.headers['Content-Type'] = 'application/json'
+            request.headers['X-TrackerToken'] = Account.pivotal.password
+          end
+
+          result = JSON.parse response.body
+
+          resulting_hash[:title] = result['name']
+          resulting_hash[:description] = result['description']
+        else
+          puts 'Pivotal ID needs to be copied from the task in Pivotal (in either 12345678 or #12345678 format).'
+          puts "Pivotal ID you entered was #{pivotal_id}, which does not match the allowed format."
+          puts 'Skipping usage of this ID.'
+          puts 'Proceeding as if Pivotal ID was not set.'
+          puts 'Please start/finish the needed task in Pivotal manually.'
+
+          resulting_hash[:pivotal_id] = nil
+        end
+      end
+    end
+
+    resulting_hash
+
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Pivotal.'
+    resulting_hash
   end
 
   def self.get_jira_project_ids

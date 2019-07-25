@@ -146,11 +146,11 @@ class Task < ActiveRecord::Base
   end
 
   def create_on_pivotal?
-    pivotal_id.blank? && this_is_a_type_a_user_wants_to_create? && Account.pivotal.present? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+    pivotal_id.blank? && this_is_a_type_a_user_wants_to_create? && Account.pivotal.present? && not_test?
   end
 
   def start_on_pivotal?
-    pivotal_id.present? && Account.pivotal.present? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+    pivotal_id.present? && Account.pivotal.present? && not_test?
   end
 
   def this_is_a_type_a_user_wants_to_create?
@@ -194,8 +194,10 @@ class Task < ActiveRecord::Base
         request.headers['Content-Type'] = 'application/json'
         request.headers['X-TrackerToken'] = Account.pivotal.password
       end
-    end
-  end
+    end 
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Pivotal.'
+  end   
 
   def finish_on_pivotal_data
     Jbuilder.encode do |j|
@@ -217,6 +219,8 @@ class Task < ActiveRecord::Base
         request.headers['X-TrackerToken'] = Account.pivotal.password
       end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Pivotal.'
   end
 
   def start_issue_on_jira_data
@@ -239,6 +243,8 @@ class Task < ActiveRecord::Base
         request.headers['Content-Type'] = 'application/json'
       end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Jira.'
   end
 
   def close_issue_on_jira_data
@@ -261,6 +267,8 @@ class Task < ActiveRecord::Base
         request.headers['Content-Type'] = 'application/json'
       end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Jira.'
   end
 
   def log_work_to_jira_data(comment = 'Done')
@@ -285,6 +293,8 @@ class Task < ActiveRecord::Base
         request.headers['Content-Type'] = 'application/json'
       end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Jira.'
   end
 
   def current_time
@@ -324,6 +334,8 @@ class Task < ActiveRecord::Base
         pivotal_id: result['id']
       )
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Pivotal.'
   end
 
   def create_issue_on_jira_data
@@ -361,6 +373,8 @@ class Task < ActiveRecord::Base
         jira_url: result['self']
       )
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Jira.'
   end
 
   def not_test?

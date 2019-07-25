@@ -41,6 +41,8 @@ module Git
       request.headers['Accept'] = 'application/vnd.github.v3+json'
       request.headers['Content-Type'] = 'application/json'
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Git.'
   end
 
   def git_rebase_to_upstream

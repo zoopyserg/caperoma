@@ -239,6 +239,33 @@ RSpec.describe Task, type: :model do
         end
       end
 
+      context 'jira account present but no internet connection' do
+        let(:task) { create :task }
+        let!(:account) { create :account, type: '--jira' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE) }
+
+        before do
+          expect(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:get).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:put).and_raise Faraday::ConnectionFailed, [404]
+        end
+
+        it 'give an error that there is no connection' do
+          expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Jira./
+          task.save
+        end
+
+        it 'should still create the task' do
+          expect {
+            task.save
+          }.to change {
+            Task.count
+          }.by(1)
+        end
+      end
+
       context 'jira account not present' do
         let(:task) { create :task }
         let(:faraday) { double('Faraday', post: response) }
@@ -263,6 +290,25 @@ RSpec.describe Task, type: :model do
         it 'should start task in Jira after create' do
           expect(task).to receive(:start_issue_on_jira)
 
+          task.save
+        end
+      end
+
+      context 'jira id present, account present, no internet connection' do
+        let!(:account) { create :account, type: '--jira' }
+        let!(:jira_key) { 'OK-1' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE) }
+
+        before do
+          allow(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:get).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:put).and_raise Faraday::ConnectionFailed, [404]
+        end
+
+        it 'should give the no connection error', :unstub_jira_starting do
+          expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Jira./
           task.save
         end
       end
@@ -321,7 +367,7 @@ RSpec.describe Task, type: :model do
           end
         end
 
-        context 'PT id present but should create' do
+        context 'PT id present and should create' do
           let(:pt_id) { '567890123' }
           let(:should_create) { true }
 
@@ -331,6 +377,39 @@ RSpec.describe Task, type: :model do
             task.reload.tap do |task|
               expect(task.pivotal_id).to eq '567890123'
             end
+          end
+        end
+
+        context 'PT id present and should create but there is no internet connection' do
+          let(:pt_id) { nil }
+          let(:should_create) { true }
+
+          before do
+            allow(Faraday).to receive(:new).and_return faraday
+            allow(faraday).to receive(:post).and_raise Faraday::ConnectionFailed, [404]
+            allow(faraday).to receive(:get).and_raise Faraday::ConnectionFailed, [404]
+            allow(faraday).to receive(:put).and_raise Faraday::ConnectionFailed, [404]
+          end
+
+          it 'should still be nil' do
+            task.save
+
+            task.reload.tap do |task|
+              expect(task.pivotal_id).to be_blank
+            end
+          end
+
+          it 'should say there is no connection' do
+            expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Pivotal./
+            task.save
+          end
+          
+          it 'should still create the task' do
+            expect {
+              task.save
+            }.to change {
+              Task.count
+            }.by(1)
           end
         end
 
@@ -426,7 +505,6 @@ RSpec.describe Task, type: :model do
 
     describe '::start_issue_on_pivotal' do
       let(:task) { build :task, pivotal_id: pivotal_id }
-      # before { allow(task).to receive(:this_is_a_type_a_user_wants_to_create?).and_return should_create_this_type }
 
       context 'pt id present, pt account present' do
         let(:pivotal_id) { '12345678' }
@@ -435,6 +513,25 @@ RSpec.describe Task, type: :model do
         it 'should start task in pivotal after create' do
           expect(task).to receive(:start_issue_on_pivotal)
 
+          task.save
+        end
+      end
+
+      context 'pt id present, pt account present, no internet connection' do
+        let(:pivotal_id) { '12345678' }
+        let!(:account) { create :account, type: '--pivotal' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: PIVOTAL_ISSUE_CREATION_RESPONSE) }
+
+        before do
+          allow(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:get).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:put).and_raise Faraday::ConnectionFailed, [404]
+        end
+
+        it 'should give the no connection error', :unstub_pivotal_starting do
+          expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Pivotal./
           task.save
         end
       end
@@ -551,6 +648,29 @@ RSpec.describe Task, type: :model do
           expect(format['comment']).to eq 'some comment'
           expect(format['started']).to eq 'time'
           expect(format['timeSpent']).to eq 'spent'
+        end
+      end
+    end
+
+    describe '#log_work_to_jira' do
+      let!(:task) { create :task, jira_key: jira_key }
+
+      context 'no internet connection' do
+        let!(:account) { create :account, type: '--jira' }
+        let!(:jira_key) { 'OK-1' }
+        let(:faraday) { double('Faraday', post: response) }
+        let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE) }
+
+        before do
+          allow(Faraday).to receive(:new).and_return faraday
+          allow(faraday).to receive(:post).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:get).and_raise Faraday::ConnectionFailed, [404]
+          allow(faraday).to receive(:put).and_raise Faraday::ConnectionFailed, [404]
+        end
+
+        it 'should give the no connection error', :unstub_jira_starting do
+          expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Jira./
+          task.send(:log_work_to_jira)
         end
       end
     end
