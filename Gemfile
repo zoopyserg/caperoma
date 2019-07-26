@@ -20,7 +20,7 @@ gem 'whenever', require: false
 group :development do
   gem 'bundler'
   gem 'database_cleaner'
-  gem 'factory_bot_rails'
+  gem 'factory_girl'
   gem 'juwelier'
   gem 'rdoc'
   gem 'rspec'
