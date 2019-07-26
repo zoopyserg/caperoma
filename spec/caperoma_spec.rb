@@ -135,7 +135,6 @@ describe Caperoma do
           }.by(1)
         end
       end
-
     end
 
     context 'title not present, -p present, but pivotal Account is not set up' do
