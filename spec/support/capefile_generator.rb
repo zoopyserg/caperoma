@@ -32,5 +32,5 @@ def create_capefile(jira_project_id = 12_345)
 end
 
 def remove_capefile
-  File.delete 'Capefile.test' if File.exists? 'Capefile.test'
+  File.delete 'Capefile.test' if File.exist? 'Capefile.test'
 end
