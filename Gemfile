@@ -2,13 +2,10 @@
 
 source 'https://rubygems.org'
 
-ruby '2.6.3'
-
 # Runtime dependencies
 gem 'actionpack'
 gem 'actionview'
 gem 'activerecord'
-gem 'activesupport'
 gem 'faraday'
 gem 'gmail'
 gem 'jbuilder'

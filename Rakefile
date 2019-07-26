@@ -66,8 +66,10 @@ Juwelier::Tasks.new do |gem|
   gem.add_development_dependency 'shoulda-matchers', '~> 4.1.0'
   gem.add_development_dependency 'timecop', '~> 0.9.1'
 
-  gem.requirements << 'sqlite'
-  gem.requirements << 'git'
+  gem.requirements << 'Ruby 2.4 or higher'
+  gem.requirements << 'SQLite'
+  gem.requirements << 'Git'
+  gem.requirements << 'Crontab'
 
   gem.extra_rdoc_files = ['README.md', 'HELP']
   gem.version = File.exist?('VERSION') ? File.read('VERSION') : ''
