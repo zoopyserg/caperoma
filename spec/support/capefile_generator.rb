@@ -33,7 +33,7 @@ end
 
 def create_incomplete_capefile
   capefile_sample_data = {
-    'github_repo' => 'owner/repo',
+    'github_repo' => 'owner/repo'
   }
   yaml = capefile_sample_data.to_yaml
   File.write 'Capefile.test', yaml
