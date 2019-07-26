@@ -57,9 +57,10 @@ class Task < ActiveRecord::Base
         puts 'You are working on: '
         puts "Title: #{task.title}"
         puts "Type: #{task.type}"
-        puts "Jira ID: #{task.jira_key}." if task.jira_key.present?
+        puts "Jira ID: #{task.jira_key} (#{task.jira_live_url})." if task.jira_key.present?
         puts "Pivotal ID: #{task.pivotal_id} (#{task.pivotal_url})" if task.pivotal_id.present?
         puts "Time spent at the moment: #{task.time_spent_so_far}"
+        puts "Branch with the task: #{task.branch}" if task.branch.present?
         puts "Pull request will be sent to this branch: #{task.parent_branch}" if task.parent_branch.present?
         puts "Project location: #{task.project.folder_path}"
       end
