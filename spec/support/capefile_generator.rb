@@ -2,7 +2,7 @@
 
 require 'yaml'
 
-def create_capefile(jira_project_id = 12345)
+def create_capefile(jira_project_id = 12_345)
   capefile_sample_data = {
     'github_repo' => 'owner/repo',
     'jira_url' => 'https://owner.atlassian.net/',
