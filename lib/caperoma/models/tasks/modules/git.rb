@@ -2,8 +2,6 @@
 
 module Git
   def git_branch
-    puts 'using this branch:'
-    puts branch
     `git -C "#{project.folder_path}" checkout -b #{branch}` if enable_git?
   end
 
