@@ -7,7 +7,6 @@ require 'action_view'
 require 'json'
 require 'jbuilder'
 require 'time_difference'
-require 'pivotal-tracker'
 require 'net/smtp'
 require 'gmail'
 require 'faraday'
@@ -43,9 +42,6 @@ require 'caperoma/models/reports/three_day_report'
 require 'caperoma/models/reports/retrospective_report'
 
 require 'caperoma/version'
-
-require 'caperoma/services/pivotal_fetcher'
-require 'caperoma/services/airbrake_email_processor'
 
 class Caperoma
   def self.setup
