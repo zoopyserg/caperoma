@@ -84,10 +84,10 @@ describe Caperoma do
       end
     end
 
-    context 'title not present but -p can get the title from pivotal', :unstab_api_calls do
+    context 'title not present but -p can access pivotal', :unstab_api_calls do
       let!(:args) { ['bug', '-p', '1234567'] }
 
-      let(:response_body) { { 'name' => 'awesome bug', 'description' => 'some description' }.to_json }
+      let(:response_body) { { 'name' => 'awesome bug', 'description' => 'some description', 'estimate' => estimate }.to_json }
       let(:response) { double('Faraday', body: response_body, status: 200) }
       let(:faraday) { double('Faraday', post: response) }
 
@@ -102,17 +102,40 @@ describe Caperoma do
         allow(faraday).to receive(:put).and_return response
       end
 
-      it 'should create' do
-        expect do
-          Caperoma.create_task(args)
-        end.to change {
-                 Bug.where(
-                   title: 'awesome bug',
-                   description: 'some description',
-                   project_id: project.id
-                 ).count
-               }.by(1)
+      context 'estimate is present' do
+        let(:estimate) { 1 }
+
+        it 'should create getting values from pivotal' do
+          expect do
+            Caperoma.create_task(args)
+          end.to change {
+            Bug.where(
+              title: 'awesome bug',
+              description: 'some description',
+              pivotal_estimate: 1,
+              project_id: project.id
+            ).count
+          }.by(1)
+        end
       end
+
+      context 'estimate is not present' do
+        let(:estimate) { nil }
+
+        it 'should set zero to estimate' do
+          expect do
+            Caperoma.create_task(args)
+          end.to change {
+            Bug.where(
+              title: 'awesome bug',
+              description: 'some description',
+              pivotal_estimate: 0,
+              project_id: project.id
+            ).count
+          }.by(1)
+        end
+      end
+
     end
 
     context 'title not present, -p present, but pivotal Account is not set up' do
@@ -137,12 +160,12 @@ describe Caperoma do
         expect do
           subject
         end.to change {
-                 Bug.where(
-                   title: 'awesome bug',
-                   description: 'some description',
-                   project_id: project.id
-                 ).count
-               }.by(0)
+          Bug.where(
+            title: 'awesome bug',
+            description: 'some description',
+            project_id: project.id
+          ).count
+        }.by(0)
       end
 
       it 'should say it could not get access' do
@@ -173,12 +196,12 @@ describe Caperoma do
       it 'should not create' do
         expect do
         end.to change {
-                 Bug.where(
-                   title: 'awesome bug',
-                   description: 'some description',
-                   project_id: project.id
-                 ).count
-               }.by(0)
+          Bug.where(
+            title: 'awesome bug',
+            description: 'some description',
+            project_id: project.id
+          ).count
+        }.by(0)
       end
 
       it 'should say it could not get access' do
@@ -209,12 +232,12 @@ describe Caperoma do
         expect do
           Caperoma.create_task(args)
         end.to change {
-                 Bug.where(
-                   title: 'awesome bug',
-                   description: 'some description',
-                   project_id: project.id
-                 ).count
-               }.by(1)
+          Bug.where(
+            title: 'awesome bug',
+            description: 'some description',
+            project_id: project.id
+          ).count
+        }.by(1)
       end
     end
   end
