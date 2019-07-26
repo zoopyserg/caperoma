@@ -99,10 +99,11 @@ You implemented the solution, but on the way to it, you were secured by the Cape
 
 Jira IDs for each of them, as well as other settings, can be set in `Capefile`.
 
-## Ubuntu Setup
-```bash
-sudo apt install -y sqlite3 crontab git
-```
+## System Requirements
+- Ruby 2.4 or higher
+- SQLite
+- Git
+- Crontab
 
 ## Installation
 ```bash
