@@ -1,8 +1,6 @@
 # Begin Whenever generated tasks for: caperoma
 0 22 * * 1-5 /bin/bash -l -c 'caperoma report daily'
 
-0,10,20,30,40,50 * * * * /bin/bash -l -c 'caperoma copy_airbrake_emails_to_pivotal'
-
 0 22 * * 3,5 /bin/bash -l -c 'caperoma report three_day'
 
 0 22 * * 5 /bin/bash -l -c 'caperoma report weekly'
