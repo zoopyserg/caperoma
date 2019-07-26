@@ -135,9 +135,11 @@ class Caperoma
   end
 
   def self.init
-    if `git -C "#{project.folder_path}" rev-parse --is-inside-work-tree`.strip == 'true'
+    if `git rev-parse --is-inside-work-tree`.strip == 'true'
       template_path = File.join(File.dirname(__FILE__), '..', 'Capefile.template')
-      new_path = `git rev-parse --show-toplevel`.strip + '/Capefile'
+      capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+
+      new_path = `git rev-parse --show-toplevel`.strip + '/' + capefile_filename
 
       FileUtils.cp template_path, new_path
 
