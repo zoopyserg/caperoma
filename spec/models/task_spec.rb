@@ -1005,6 +1005,7 @@ RSpec.describe Task, type: :model do
           expect(format['fields']['project']['id']).to eq '123'
           expect(format['fields']['issuetype']['id']).to eq '492'
           expect(format['fields']['summary']).to eq 'dupis'
+          expect(format['fields']['description']['content'][0]['content'][0]['text']).to eq 'bamis'
           expect(format['fields']['assignee']['name']).to eq 'someuser'
         end
       end
@@ -1227,6 +1228,7 @@ RSpec.describe Task, type: :model do
             expect(format['current_state']).to eq 'unstarted'
             expect(format['estimate']).to eq 5
             expect(format['name']).to eq 'dupis'
+            expect(format['description']).to eq 'bamis'
             expect(format['story_type']).to eq 'chore'
           end
         end
