@@ -996,17 +996,38 @@ RSpec.describe Task, type: :model do
     let!(:account) { create :account, type: '--jira', username: 'someuser' }
 
     describe '#create_issue_on_jira_data' do
-      let!(:task) { create :task, title: 'dupis', description: 'bamis', project: project }
+      let!(:task) { create :task, title: 'dupis', description: description, project: project }
 
-      it 'should format hash' do
-        allow(task).to receive(:issue_type).and_return '492'
-        result = task.send(:create_issue_on_jira_data)
-        JSON.parse(result).tap do |format|
-          expect(format['fields']['project']['id']).to eq '123'
-          expect(format['fields']['issuetype']['id']).to eq '492'
-          expect(format['fields']['summary']).to eq 'dupis'
-          expect(format['fields']['description']['content'][0]['content'][0]['text']).to eq 'bamis'
-          expect(format['fields']['assignee']['name']).to eq 'someuser'
+      context 'description present' do
+        let(:description) { 'bamis' }
+
+        it 'should format hash' do
+          allow(task).to receive(:issue_type).and_return '492'
+          result = task.send(:create_issue_on_jira_data)
+          JSON.parse(result).tap do |format|
+            expect(format['fields']['project']['id']).to eq '123'
+            expect(format['fields']['issuetype']['id']).to eq '492'
+            expect(format['fields']['summary']).to eq 'dupis'
+            expect(format['fields']['description']['content'][0]['content'][0]['text']).to eq 'bamis'
+            expect(format['fields']['assignee']['name']).to eq 'someuser'
+          end
+        end
+      end
+
+      context 'description not' do
+        let(:description) { nil }
+
+        it 'should format hash' do
+          allow(task).to receive(:issue_type).and_return '492'
+          result = task.send(:create_issue_on_jira_data)
+          JSON.parse(result).tap do |format|
+            expect(format['fields']['project']['id']).to eq '123'
+            expect(format['fields']['issuetype']['id']).to eq '492'
+            expect(format['fields']['summary']).to eq 'dupis'
+            expect(format['fields']['assignee']['name']).to eq 'someuser'
+
+            expect(format['fields']['description']).to be_nil
+          end
         end
       end
     end

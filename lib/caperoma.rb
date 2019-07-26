@@ -12,9 +12,13 @@ require 'gmail'
 require 'faraday'
 require 'pp'
 
+database_name = "#{ENV['HOME']}/.caperoma.sqlite3"
+database_name = "#{ENV['HOME']}/.caperoma-test.sqlite3" if ENV['CAPEROMA_TEST'].present? || ENV['CAPEROMA_INTEGRATION_TEST'].present?
+database_name = "#{ENV['HOME']}/.caperoma-staging.sqlite3" if ENV['CAPEROMA_STAGING'].present?
+
 DB_SPEC = {
   adapter: 'sqlite3',
-  database: ENV['CAPEROMA_TEST'].present? || ENV['CAPEROMA_INTEGRATION_TEST'].present? ? "#{ENV['HOME']}/.caperoma-test.sqlite3" : "#{ENV['HOME']}/.caperoma.sqlite3"
+  database: database_name
 }.freeze
 
 ActiveRecord::Base.establish_connection(DB_SPEC)

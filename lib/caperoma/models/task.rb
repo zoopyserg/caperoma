@@ -438,7 +438,7 @@ class Task < ActiveRecord::Base
   end
 
   def create_issue_on_jira_data
-    {
+    hash = {
       fields: {
         summary: title.to_s,
         issuetype: {
@@ -447,26 +447,31 @@ class Task < ActiveRecord::Base
         project: {
           id: project.jira_project_id.to_s
         },
-        description: {
-          type: 'doc',
-          version: 1,
-          content: [
-            {
-              type: 'paragraph',
-              content: [
-                {
-                  text: description,
-                  type: 'text'
-                }
-              ]
-            }
-          ]
-        },
         assignee: {
           name: Account.jira.username
         }
       }
-    }.to_json
+    }
+
+    description_hash = {
+      type: 'doc',
+      version: 1,
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              text: description,
+              type: 'text'
+            }
+          ]
+        }
+      ]
+    }
+
+    hash[:fields][:description] = description_hash if description.present?
+
+    hash.to_json
   end
 
   def create_issue_on_jira
