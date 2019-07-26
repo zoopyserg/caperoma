@@ -457,9 +457,9 @@ class Caperoma
   def self.get_pivotal_data(pivotal_id)
     resulting_hash = { title: nil, description: nil, pivotal_id: pivotal_id, estimate: 0 }
 
-    if Account.pivotal.present?
-      if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
-        if pivotal_id.present?
+    if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+      if pivotal_id.present?
+        if Account.pivotal.present?
 
           if pivotal_id.match? /\d+/
             conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
@@ -500,14 +500,12 @@ class Caperoma
 
             resulting_hash[:pivotal_id] = nil
           end
+        else
+          puts 'Please set up Pivotal account.'
         end
       end
-
-      resulting_hash
-    else
-      puts 'Please set up Pivotal account.'
-      resulting_hash
     end
+    resulting_hash
   rescue Faraday::ConnectionFailed
     puts 'Connection failed. Performing the task without requests to Pivotal.'
     resulting_hash
