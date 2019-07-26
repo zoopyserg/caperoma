@@ -24,8 +24,8 @@ describe 'Status' do
       result = `CAPEROMA_INTEGRATION_TEST=true ruby -I./lib bin/caperoma status`
       expect(result).to match /Type: Feature/
       expect(result).to match /Title: my title/
-      expect(result).to match /Jira ID: PBO-2 \(https:\/\/test.atlassian.com\/browse\/PBO-2\)/
-      expect(result).to match /Pivotal ID: 12345678 \(https:\/\/www.pivotaltracker.com\/story\/show\/12345678\)/
+      expect(result).to match %r{Jira ID: PBO-2 \(https://test.atlassian.com/browse/PBO-2\)}
+      expect(result).to match %r{Pivotal ID: 12345678 \(https://www.pivotaltracker.com/story/show/12345678\)}
       expect(result).to match /Branch with the task: pbo-2-my-title/
       expect(result).to match /Time spent at the moment: 2h/
       expect(result).to match /Pull request will be sent to this branch: develop/
