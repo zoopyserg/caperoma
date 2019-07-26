@@ -157,123 +157,36 @@ class Caperoma
   def self.get_jira_issue_type_ids
     puts 'Getting issue ids from Jira'
 
-    capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
-    if File.exist?(capefile_filename)
-      capedata = YAML.load_file(capefile_filename)
-      if capedata
-        jira_url = capedata['jira_url']
-        if jira_url
-          puts 'Receiving issue types'
-          conn = Faraday.new(url: jira_url) do |c|
-            c.basic_auth(Account.jira.email, Account.jira.password)
-            c.adapter Faraday.default_adapter
-          end
-
-          response = conn.get do |request|
-            request.url 'rest/api/3/issuetype.json'
-            # request.body = data
-            request.headers['User-Agent'] = 'Caperoma'
-            request.headers['Content-Type'] = 'application/json'
-          end
-
-          case response.status
-          when 200, 201, 202, 204, 301, 302, 303, 304, 307
-            puts 'Received these issue types:'
-
-            result = JSON.parse(response.body)
-
-            result.each do |item|
-              puts "ID: #{item['id']}, Name: #{item['name']}"
-            end
-          when 401, 403
-            puts 'No access Jira. Maybe login or api_key are incorrect.'
-          when 404
-            puts 'Resource not found. Maybe Jira ID is incorrect.'
-          else
-            puts 'Could not get data from Jira.'
-            puts "Error status: #{response.status}"
-            puts "Message from server: #{response.reason_phrase}"
-          end
-        else
-          puts 'Please put at least jira url into your Capefile'
-        end
-      else
-        puts 'Can not parse Capfile. Is it formatted properly?'
-      end
-    else
-      puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
-    end
-  rescue Faraday::ConnectionFailed
-    puts 'Connection failed.'
-  end
-
-  def self.get_jira_transition_ids
-    puts 'Getting transition ids from Jira'
-
-    capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
-    if File.exist?(capefile_filename)
-      capedata = YAML.load_file(capefile_filename)
-      if capedata
-        jira_url = capedata['jira_url']
-        if jira_url
-          jira_project_id = capedata['jira_project_id']
-
-          if jira_project_id
-            puts 'Receiving an issue to get transition ids:'
-
+    if Account.jira.present?
+      capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+      if File.exist?(capefile_filename)
+        capedata = YAML.load_file(capefile_filename)
+        if capedata
+          jira_url = capedata['jira_url']
+          if jira_url
+            puts 'Receiving issue types'
             conn = Faraday.new(url: jira_url) do |c|
               c.basic_auth(Account.jira.email, Account.jira.password)
               c.adapter Faraday.default_adapter
             end
 
             response = conn.get do |request|
-              request.url "rest/api/3/search?jql=project=%22#{jira_project_id}%22"
+              request.url 'rest/api/3/issuetype.json'
               request.headers['User-Agent'] = 'Caperoma'
               request.headers['Content-Type'] = 'application/json'
             end
 
             case response.status
             when 200, 201, 202, 204, 301, 302, 303, 304, 307
+              puts 'Received these issue types:'
 
-              issues = JSON.parse(response.body)['issues']
+              result = JSON.parse(response.body)
 
-              if !issues.empty?
-                first_issue = issues[0]
-                first_issue_key = first_issue['key']
-
-                conn2 = Faraday.new(url: jira_url) do |c|
-                  c.basic_auth(Account.jira.email, Account.jira.password)
-                  c.adapter Faraday.default_adapter
-                end
-
-                response2 = conn2.get do |request|
-                  request.url "rest/api/3/issue/#{first_issue_key}/transitions"
-                  request.headers['User-Agent'] = 'Caperoma'
-                  request.headers['Content-Type'] = 'application/json'
-                end
-
-                case response2.status
-                when 200, 201, 202, 204, 301, 302, 303, 304, 307
-                  puts 'Received these transitions:'
-                  transitions = JSON.parse(response2.body)['transitions']
-
-                  transitions.each do |transition|
-                    pp "Name: #{transition['name']}, id: #{transition['id']}"
-                  end
-                when 401, 403
-                  puts 'No access Jira. Maybe login or api_key are incorrect.'
-                when 404
-                  puts 'Resource not found. Maybe Jira ID is incorrect.'
-                else
-                  puts 'Could not get data from Jira.'
-                  puts "Error status: #{response2.status}"
-                  puts "Message from server: #{response2.reason_phrase}"
-                end
-              else
-                puts 'Please create at least one issue in this project manually in the browser.'
+              result.each do |item|
+                puts "Name: #{item['name']}, ID: #{item['id']}"
               end
             when 401, 403
-              puts 'No access Jira. Maybe login or api_key are incorrect.'
+              puts 'No access to Jira. Maybe login or api_key are incorrect.'
             when 404
               puts 'Resource not found. Maybe Jira ID is incorrect.'
             else
@@ -282,17 +195,110 @@ class Caperoma
               puts "Message from server: #{response.reason_phrase}"
             end
           else
-            puts 'Please put jira_project_id into your Capefile'
+            puts 'Please put at least jira url into your Capefile'
           end
-
         else
-          puts 'Please put jira_url into your Capefile'
+          puts 'Can not parse Capfile. Is it formatted properly?'
         end
       else
-        puts 'Can not parse Capfile. Is it formatted properly?'
+        puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
       end
     else
-      puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
+      puts 'Please set up Jira account first'
+    end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed.'
+  end
+
+  def self.get_jira_transition_ids
+    puts 'Getting transition ids from Jira'
+
+    if Account.jira.present?
+      capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+      if File.exist?(capefile_filename)
+        capedata = YAML.load_file(capefile_filename)
+        if capedata
+          jira_url = capedata['jira_url']
+          if jira_url
+            jira_project_id = capedata['jira_project_id']
+
+            if jira_project_id
+              puts 'Receiving an issue to get transition ids:'
+
+              conn = Faraday.new(url: jira_url) do |c|
+                c.basic_auth(Account.jira.email, Account.jira.password)
+                c.adapter Faraday.default_adapter
+              end
+
+              response = conn.get do |request|
+                request.url "rest/api/3/search?jql=project=%22#{jira_project_id}%22"
+                request.headers['User-Agent'] = 'Caperoma'
+                request.headers['Content-Type'] = 'application/json'
+              end
+
+              case response.status
+              when 200, 201, 202, 204, 301, 302, 303, 304, 307
+                issues = JSON.parse(response.body)['issues']
+
+                if !issues.empty?
+                  first_issue = issues[0]
+                  first_issue_key = first_issue['key']
+
+                  conn2 = Faraday.new(url: jira_url) do |c|
+                    c.basic_auth(Account.jira.email, Account.jira.password)
+                    c.adapter Faraday.default_adapter
+                  end
+
+                  response2 = conn2.get do |request|
+                    request.url "rest/api/3/issue/#{first_issue_key}/transitions"
+                    request.headers['User-Agent'] = 'Caperoma'
+                    request.headers['Content-Type'] = 'application/json'
+                  end
+
+                  case response2.status
+                  when 200, 201, 202, 204, 301, 302, 303, 304, 307
+                    puts 'Received these transitions:'
+                    transitions = JSON.parse(response2.body)['transitions']
+
+                    transitions.each do |transition|
+                      pp "Name: #{transition['name']}, ID: #{transition['id']}"
+                    end
+                  when 401, 403
+                    puts 'No access to Jira. Maybe login or api_key are incorrect.'
+                  when 404
+                    puts 'Resource not found. Maybe Jira ID is incorrect.'
+                  else
+                    puts 'Could not get data from Jira.'
+                    puts "Error status: #{response2.status}"
+                    puts "Message from server: #{response2.reason_phrase}"
+                  end
+                else
+                  puts 'Please create at least one issue in this project manually in the browser.'
+                end
+              when 401, 403
+                puts 'No access to Jira. Maybe login or api_key are incorrect.'
+              when 404
+                puts 'Resource not found. Maybe Jira ID is incorrect.'
+              else
+                puts 'Could not get data from Jira.'
+                puts "Error status: #{response.status}"
+                puts "Message from server: #{response.reason_phrase}"
+              end
+            else
+              puts 'Please put jira_project_id into your Capefile'
+            end
+
+          else
+            puts 'Please put jira_url into your Capefile'
+          end
+        else
+          puts 'Can not parse Capfile. Is it formatted properly?'
+        end
+      else
+        puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
+      end
+    else
+      puts 'Please set up Jira account first'
     end
   rescue Faraday::ConnectionFailed
     puts 'Connection failed.'
@@ -451,51 +457,56 @@ class Caperoma
   def self.get_pivotal_data(pivotal_id)
     resulting_hash = { title: nil, description: nil, pivotal_id: pivotal_id }
 
-    if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
-      if pivotal_id.present?
+    if Account.pivotal.present?
+      if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+        if pivotal_id.present?
 
-        if pivotal_id.match? /\d+/
-          conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
-            c.adapter Faraday.default_adapter
-          end
+          if pivotal_id.match? /\d+/
+            conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
+              c.adapter Faraday.default_adapter
+            end
 
-          response = conn.get do |request|
-            request.url "services/v5/stories/#{pivotal_id}"
-            request.headers['User-Agent'] = 'Caperoma'
-            request.headers['Content-Type'] = 'application/json'
-            request.headers['X-TrackerToken'] = Account.pivotal.password
-          end
+            response = conn.get do |request|
+              request.url "services/v5/stories/#{pivotal_id}"
+              request.headers['User-Agent'] = 'Caperoma'
+              request.headers['Content-Type'] = 'application/json'
+              request.headers['X-TrackerToken'] = Account.pivotal.password
+            end
 
-          case response.status
-          when 200, 201, 202, 204, 301, 302, 303, 304, 307
-            result = JSON.parse response.body
+            case response.status
+            when 200, 201, 202, 204, 301, 302, 303, 304, 307
+              result = JSON.parse response.body
 
-            resulting_hash[:title] = result['name']
-            resulting_hash[:description] = result['description']
-          when 401, 403
-            puts 'No access Pivotal. Maybe login or api_key are incorrect.'
-          when 404
-            puts 'Resource not found. Maybe Pivotal ID is incorrect.'
+              resulting_hash[:title] = result['name']
+              resulting_hash[:description] = result['description']
+            when 401, 403
+              puts 'No access Pivotal. Maybe login or api_key are incorrect.'
+            when 404
+              puts 'Resource not found. Maybe Pivotal ID is incorrect.'
+            else
+              puts 'Could not get data from Pivotal.'
+              puts "Error status: #{response.status}"
+              puts "Message from server: #{response.reason_phrase}"
+            end
+
+            resulting_hash
           else
-            puts 'Could not get data from Pivotal.'
-            puts "Error status: #{response.status}"
-            puts "Message from server: #{response.reason_phrase}"
+            puts 'Pivotal ID needs to be copied from the task in Pivotal (in either 12345678 or #12345678 format).'
+            puts "Pivotal ID you entered was #{pivotal_id}, which does not match the allowed format."
+            puts 'Skipping usage of this ID.'
+            puts 'Proceeding as if Pivotal ID was not set.'
+            puts 'Please start/finish the needed task in Pivotal manually.'
+
+            resulting_hash[:pivotal_id] = nil
           end
-
-          resulting_hash
-        else
-          puts 'Pivotal ID needs to be copied from the task in Pivotal (in either 12345678 or #12345678 format).'
-          puts "Pivotal ID you entered was #{pivotal_id}, which does not match the allowed format."
-          puts 'Skipping usage of this ID.'
-          puts 'Proceeding as if Pivotal ID was not set.'
-          puts 'Please start/finish the needed task in Pivotal manually.'
-
-          resulting_hash[:pivotal_id] = nil
         end
       end
-    end
 
-    resulting_hash
+      resulting_hash
+    else
+      puts 'Please set up Pivotal account.'
+      resulting_hash
+    end
   rescue Faraday::ConnectionFailed
     puts 'Connection failed. Performing the task without requests to Pivotal.'
     resulting_hash
@@ -504,49 +515,54 @@ class Caperoma
   def self.get_jira_project_ids
     puts 'Getting projects from Jira'
 
-    capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
-    if File.exist?(capefile_filename)
-      capedata = YAML.load_file(capefile_filename)
-      if capedata
-        jira_url = capedata['jira_url']
-        if jira_url
-          conn = Faraday.new(url: jira_url) do |c|
-            c.basic_auth(Account.jira.email, Account.jira.password)
-            c.adapter Faraday.default_adapter
-          end
+    if Account.jira.present?
 
-          response = conn.get do |request|
-            request.url 'rest/api/3/project.json'
-            request.headers['User-Agent'] = 'Caperoma'
-            request.headers['Content-Type'] = 'application/json'
-          end
-
-          case response.status
-          when 200, 201, 202, 204, 301, 302, 303, 304, 307
-            puts 'Received these projects'
-
-            result = JSON.parse(response.body)
-
-            result.each do |project|
-              pp "Name: #{project['name']}, jira_project_id: #{project['id']}"
+      capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+      if File.exist?(capefile_filename)
+        capedata = YAML.load_file(capefile_filename)
+        if capedata
+          jira_url = capedata['jira_url']
+          if jira_url
+            conn = Faraday.new(url: jira_url) do |c|
+              c.basic_auth(Account.jira.email, Account.jira.password)
+              c.adapter Faraday.default_adapter
             end
-          when 401, 403
-            puts 'No access Jira. Maybe login or api_key are incorrect.'
-          when 404
-            puts 'Resource not found. Maybe Jira ID is incorrect.'
+
+            response = conn.get do |request|
+              request.url 'rest/api/3/project.json'
+              request.headers['User-Agent'] = 'Caperoma'
+              request.headers['Content-Type'] = 'application/json'
+            end
+
+            case response.status
+            when 200, 201, 202, 204, 301, 302, 303, 304, 307
+              puts 'Received these projects'
+
+              result = JSON.parse(response.body)
+
+              result.each do |project|
+                puts "Name: #{project['name']}, jira_project_id: #{project['id']}"
+              end
+            when 401, 403
+              puts 'No access to Jira. Maybe login or api_key are incorrect.'
+            when 404
+              puts 'Resource not found. Maybe Jira ID is incorrect.'
+            else
+              puts 'Could not get data from Jira.'
+              puts "Error status: #{response.status}"
+              puts "Message from server: #{response.reason_phrase}"
+            end
           else
-            puts 'Could not get data from Jira.'
-            puts "Error status: #{response.status}"
-            puts "Message from server: #{response.reason_phrase}"
+            puts 'Please put at least jira url into your Capefile'
           end
         else
-          puts 'Please put at least jira url into your Capefile'
+          puts 'Can not parse Capfile. Is it formatted properly?'
         end
       else
-        puts 'Can not parse Capfile. Is it formatted properly?'
+        puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
       end
     else
-      puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
+      puts 'Please set up Jira account first'
     end
   rescue Faraday::ConnectionFailed
     puts 'Connection failed.'
