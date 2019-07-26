@@ -312,6 +312,13 @@ $ caperoma projects
 3) Cosmic project (jira_project_id: 10534)
 ```
 
+`caperoma open folder_name` - goes to the folder of the project where the full path contains `folder_name`.
+Example:
+```bash
+$ caperoma open myproject
+Opening /path/to/myproject 
+```
+
 ### Starting Tasks
 #### Start a Feature
 `caperoma feature [options]` - Creates a feature in a new branch:

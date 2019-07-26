@@ -13,7 +13,7 @@ Available commands
 
 ### Get Issue IDs from Jira 
 `caperoma get_jira_issue_type_ids` - see what issue IDs does your Jira support, to put them into the Capefile.
-#
+
 ### Get Transition IDs from Jira 
 `caperoma get_jira_transition_ids` - see what transition IDs does your Jira support, to put them into the Capefile.
 
@@ -43,6 +43,13 @@ $ caperoma projects
 1) Good project (jira_project_id: 10000)
 2) Best project  (jira_project_id: 10014)
 3) Cosmic project (jira_project_id: 10534)
+```
+
+`caperoma open folder_name` - goes to the folder of the project where the full path contains `folder_name`.
+Example:
+```bash
+$ caperoma open myproject
+Opening /path/to/myproject 
 ```
 
 ### Starting Tasks

@@ -134,6 +134,25 @@ class Caperoma
     puts "Database with all your data is located at: #{DB_SPEC[:database]}"
   end
 
+  def self.open(argv)
+    if argv[1].present?
+      searched_path = argv[1].to_s
+      matching_projects = Project.all.select { |project| project.folder_path.match? /#{searched_path}/ }
+      case matching_projects.count
+      when 0
+        puts 'Project not found. Run "caperoma projects" to see them.'
+      when 1
+        puts "Changing to #{matching_projects.first.folder_path}"
+        Dir.chdir(matching_projects.first.folder_path) if ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+      else
+        puts 'Found more than one project:'
+        matching_projects.each_with_index { |project, index| puts "#{index}) #{project.folder_path}" }
+      end
+    else
+      puts 'Enter the name'
+    end
+  end
+
   def self.init
     if `git -C "#{project.folder_path}" rev-parse --is-inside-work-tree`.strip == 'true'
       template_path = File.join(File.dirname(__FILE__), '..', 'Capefile.template')

@@ -18,6 +18,8 @@ when 'get_jira_project_ids'
   Caperoma.get_jira_project_ids
 when 'init'
   Caperoma.init
+when 'open'
+  Caperoma.open(ARGV)
 when 'projects'
   Project.all.each { |project| puts "#{project.id}) #{project.folder_path} (jira_project_id: #{project.jira_project_id}, pivotal_tracker_project_id: #{project.pivotal_tracker_project_id})" }
 when /^(chore|bug|feature|fix|meeting)$/

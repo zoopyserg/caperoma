@@ -7,6 +7,57 @@ describe Caperoma do
 
   before { create_capefile('123') }
 
+  describe 'open' do
+    context 'query exists' do
+      subject { Caperoma.open(['open', 'myproject']) }
+  
+      context 'project exists' do
+        let!(:project) { create :project, jira_project_id: '123', folder_path: '/path/to/myproject' }
+  
+        let(:content) { /Changing to \/path\/to\/myproject/ }
+
+        it { expect { subject }.to output(content).to_stdout }
+      end
+
+      context 'not a single project did not match' do
+        let!(:project) { create :project, jira_project_id: '123', folder_path: '/path/to/hisproject' }
+  
+        let(:content) { /Project not found. Run "caperoma projects" to see them./ }
+
+        it { expect { subject }.to output(content).to_stdout }
+      end
+  
+      context 'more than one project matched' do
+        let!(:project1) { create :project, jira_project_id: '123', folder_path: '/path/to/myproject1' }
+        let!(:project2) { create :project, jira_project_id: '123', folder_path: '/path/to/myproject2' }
+  
+        let(:content) { /Found more than one project:/ }
+
+        it { expect { subject }.to output(content).to_stdout }
+      end
+    end
+
+    context 'query is numeric' do
+      subject { Caperoma.open(['open', 1]) }
+
+      context 'project name is numeric exists' do
+        let!(:project) { create :project, jira_project_id: '123', folder_path: '/path/to/myproject1' }
+  
+        let(:content) { /Changing to \/path\/to\/myproject1/ }
+
+        it { expect { subject }.to output(content).to_stdout }
+      end
+    end
+
+    context 'query does not exist' do
+      subject { Caperoma.open(['open']) }
+
+      let!(:content) { /Enter the name/ }
+
+      it { expect { subject }.to output(content).to_stdout }
+    end
+  end
+
   describe 'create tasks' do
     context 'title present' do
       let!(:args) { ['bug', '-t', 'awesome bug', '-d', 'some description'] }
