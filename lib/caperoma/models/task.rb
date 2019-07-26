@@ -391,7 +391,7 @@ class Task < ActiveRecord::Base
   def create_issue_on_pivotal_data
     Jbuilder.encode do |j|
       j.current_state 'unstarted'
-      j.estimate 1
+      j.estimate pivotal_estimate == 0 ? 1 : pivotal_estimate
       j.name title.to_s
       j.story_type story_type
     end

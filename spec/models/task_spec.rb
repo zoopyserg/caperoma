@@ -1215,16 +1215,35 @@ RSpec.describe Task, type: :model do
     end
 
     describe '#create_issue_on_pivotal_data' do
-      let!(:task) { create :task, title: 'dupis', description: 'bamis', project: project }
+      let!(:task) { create :task, title: 'dupis', description: 'bamis', project: project, pivotal_estimate: estimate }
 
-      it 'should format hash' do
-        allow(task).to receive(:story_type).and_return 'chore'
-        result = task.send(:create_issue_on_pivotal_data)
-        JSON.parse(result).tap do |format|
-          expect(format['current_state']).to eq 'unstarted'
-          expect(format['estimate']).to eq 1
-          expect(format['name']).to eq 'dupis'
-          expect(format['story_type']).to eq 'chore'
+      context 'estimate is present' do
+        let(:estimate) { 5 }
+
+        it 'should format hash' do
+          allow(task).to receive(:story_type).and_return 'chore'
+          result = task.send(:create_issue_on_pivotal_data)
+          JSON.parse(result).tap do |format|
+            expect(format['current_state']).to eq 'unstarted'
+            expect(format['estimate']).to eq 5
+            expect(format['name']).to eq 'dupis'
+            expect(format['story_type']).to eq 'chore'
+          end
+        end
+      end
+
+      context 'estimate is not present' do
+        let(:estimate) { 0 }
+
+        it 'should format hash' do
+          allow(task).to receive(:story_type).and_return 'chore'
+          result = task.send(:create_issue_on_pivotal_data)
+          JSON.parse(result).tap do |format|
+            expect(format['current_state']).to eq 'unstarted'
+            expect(format['estimate']).to eq 1
+            expect(format['name']).to eq 'dupis'
+            expect(format['story_type']).to eq 'chore'
+          end
         end
       end
     end

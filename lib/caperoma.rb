@@ -93,6 +93,7 @@ class Caperoma
         t.column :description, :text
         t.column :url, :text
         t.column :uuid, :string
+        t.column :pivotal_estimate, :integer, default: 0
         t.column :type, :string
         t.column :jira_id, :string
         t.column :jira_key, :string
@@ -417,21 +418,22 @@ class Caperoma
         title ||= pivotal_data[:title]
         description ||= pivotal_data[:description]
         pivotal_id = pivotal_data[:pivotal_id]
+        pivotal_estimate = pivotal_data[:estimate]
 
         if title
           record = nil
 
           case argv[0]
           when 'chore'
-            record = project.chores.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.chores.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
           when 'bug'
-            record = project.bugs.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.bugs.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
           when 'feature'
-            record = project.features.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.features.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
           when 'fix'
-            record = project.fixes.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.fixes.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
           when 'meeting'
-            record = project.meetings.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.meetings.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
           end
 
           if record.valid?
@@ -451,7 +453,7 @@ class Caperoma
   end
 
   def self.get_pivotal_data(pivotal_id)
-    resulting_hash = { title: nil, description: nil, pivotal_id: pivotal_id }
+    resulting_hash = { title: nil, description: nil, pivotal_id: pivotal_id, estimate: 0 }
 
     if Account.pivotal.present?
       if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
@@ -475,6 +477,7 @@ class Caperoma
 
               resulting_hash[:title] = result['name']
               resulting_hash[:description] = result['description']
+              resulting_hash[:estimate] = result['estimate'].to_i
             when 401, 403
               puts 'No access Pivotal. Maybe login or api_key are incorrect.'
             when 404
