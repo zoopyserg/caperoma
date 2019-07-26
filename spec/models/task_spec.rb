@@ -999,7 +999,7 @@ RSpec.describe Task, type: :model do
       let!(:task) { create :task, title: 'dupis', description: description, project: project }
 
       context 'description present' do
-        let(:description) {'bamis' }
+        let(:description) { 'bamis' }
 
         it 'should format hash' do
           allow(task).to receive(:issue_type).and_return '492'

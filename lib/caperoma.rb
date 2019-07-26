@@ -13,7 +13,7 @@ require 'faraday'
 require 'pp'
 
 database_name = "#{ENV['HOME']}/.caperoma.sqlite3"
-database_name = "#{ENV['HOME']}/.caperoma-test.sqlite3" if ENV['CAPEROMA_TEST'].present? || ENV['CAPEROMA_INTEGRATION_TEST'].present? 
+database_name = "#{ENV['HOME']}/.caperoma-test.sqlite3" if ENV['CAPEROMA_TEST'].present? || ENV['CAPEROMA_INTEGRATION_TEST'].present?
 database_name = "#{ENV['HOME']}/.caperoma-staging.sqlite3" if ENV['CAPEROMA_STAGING'].present?
 
 DB_SPEC = {
