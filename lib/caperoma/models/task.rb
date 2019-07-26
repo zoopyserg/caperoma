@@ -438,24 +438,24 @@ class Task < ActiveRecord::Base
   end
 
   def create_issue_on_jira_data
-    { 
+    {
       fields: {
-        summary: title.to_s, 
+        summary: title.to_s,
         issuetype: {
-          id: issue_type 
+          id: issue_type
         },
         project: {
           id: project.jira_project_id.to_s
         },
         description: {
-          type: 'doc', 
+          type: 'doc',
           version: 1,
           content: [
             {
-              type: 'paragraph', 
+              type: 'paragraph',
               content: [
                 {
-                  text: description, 
+                  text: description,
                   type: 'text'
                 }
               ]
