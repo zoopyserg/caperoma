@@ -9,28 +9,28 @@ describe Caperoma do
 
   describe 'open' do
     context 'query exists' do
-      subject { Caperoma.open(['open', 'myproject']) }
-  
+      subject { Caperoma.open(%w[open myproject]) }
+
       context 'project exists' do
         let!(:project) { create :project, jira_project_id: '123', folder_path: '/path/to/myproject' }
-  
-        let(:content) { /Changing to \/path\/to\/myproject/ }
+
+        let(:content) { %r{Changing to /path/to/myproject} }
 
         it { expect { subject }.to output(content).to_stdout }
       end
 
       context 'not a single project did not match' do
         let!(:project) { create :project, jira_project_id: '123', folder_path: '/path/to/hisproject' }
-  
+
         let(:content) { /Project not found. Run "caperoma projects" to see them./ }
 
         it { expect { subject }.to output(content).to_stdout }
       end
-  
+
       context 'more than one project matched' do
         let!(:project1) { create :project, jira_project_id: '123', folder_path: '/path/to/myproject1' }
         let!(:project2) { create :project, jira_project_id: '123', folder_path: '/path/to/myproject2' }
-  
+
         let(:content) { /Found more than one project:/ }
 
         it { expect { subject }.to output(content).to_stdout }
@@ -42,8 +42,8 @@ describe Caperoma do
 
       context 'project name is numeric exists' do
         let!(:project) { create :project, jira_project_id: '123', folder_path: '/path/to/myproject1' }
-  
-        let(:content) { /Changing to \/path\/to\/myproject1/ }
+
+        let(:content) { %r{Changing to /path/to/myproject1} }
 
         it { expect { subject }.to output(content).to_stdout }
       end

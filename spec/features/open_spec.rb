@@ -11,7 +11,7 @@ describe 'Open' do
   context 'project exists' do
     let!(:project) { create :project, jira_project_id: '123', folder_path: '/path/to/myproject' }
 
-    let(:content) { /Changing to \/path\/to\/myproject/ }
+    let(:content) { %r{Changing to /path/to/myproject} }
 
     it { expect(subject).to match content }
   end
