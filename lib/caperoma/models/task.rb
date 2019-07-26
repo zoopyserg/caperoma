@@ -71,7 +71,7 @@ class Task < ActiveRecord::Base
     update_attribute(:finished_at, Time.now)
     close_issue_on_jira
     log_work_to_jira(comment) if should_log_work?
-    finish_on_pivotal if pivotal_id.present?
+    finish_on_pivotal if finish_on_pivotal?
     puts time_spent
   end
 
@@ -80,7 +80,7 @@ class Task < ActiveRecord::Base
     update_attribute(:finished_at, Time.now)
     close_issue_on_jira
     log_work_to_jira(comment) if should_log_work?
-    finish_on_pivotal if pivotal_id.present?
+    finish_on_pivotal if finish_on_pivotal?
     puts time_spent
   end
 
@@ -89,7 +89,7 @@ class Task < ActiveRecord::Base
     update_attribute(:finished_at, Time.now)
     close_issue_on_jira
     log_work_to_jira(comment) if should_log_work?
-    finish_on_pivotal if pivotal_id.present?
+    finish_on_pivotal if finish_on_pivotal?
     puts time_spent
   end
 
@@ -102,7 +102,7 @@ class Task < ActiveRecord::Base
   end
 
   def should_log_work?
-    time_spent_so_far != '0h 0m'
+    time_spent_so_far != '0h 0m' && Account.jira.present?
   end
 
   def time_spent_so_far
@@ -154,6 +154,10 @@ class Task < ActiveRecord::Base
   end
 
   def start_on_pivotal?
+    pivotal_id.present? && Account.pivotal.present? && not_test?
+  end
+
+  def finish_on_pivotal?
     pivotal_id.present? && Account.pivotal.present? && not_test?
   end
 

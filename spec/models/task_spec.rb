@@ -102,6 +102,9 @@ RSpec.describe Task, type: :model do
   end
 
   describe 'methods' do
+    let!(:jira_account) { create :account, type: '--jira' }
+    let!(:pivotal_account) { create :account, type: '--pivotal' }
+
     context 'pivotal_id present' do
       let!(:task) { create :task, finished_at: nil, pivotal_id: '12345678', additional_time: 5 }
       describe '#finish' do
