@@ -394,6 +394,7 @@ class Task < ActiveRecord::Base
       j.current_state 'unstarted'
       j.estimate pivotal_estimate == 0 ? 1 : pivotal_estimate
       j.name title.to_s
+      j.description description
       j.story_type story_type
     end
   end
@@ -437,16 +438,35 @@ class Task < ActiveRecord::Base
   end
 
   def create_issue_on_jira_data
-    Jbuilder.encode do |j|
-      j.fields do
-        j.project     { j.id project.jira_project_id.to_s }
-        j.issuetype   { j.id issue_type }
-        j.summary     title.to_s
-        j.assignee do
-          j.name Account.jira.username
-        end
-      end
-    end
+    { 
+      fields: {
+        summary: title.to_s, 
+        issuetype: {
+          id: issue_type 
+        },
+        project: {
+          id: project.jira_project_id.to_s
+        },
+        description: {
+          type: 'doc', 
+          version: 1,
+          content: [
+            {
+              type: 'paragraph', 
+              content: [
+                {
+                  text: description, 
+                  type: 'text'
+                }
+              ]
+            }
+          ]
+        },
+        assignee: {
+          name: Account.jira.username
+        }
+      }
+    }.to_json
   end
 
   def create_issue_on_jira
