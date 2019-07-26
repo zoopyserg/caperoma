@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-FactoryBot.define do
+FactoryGirl.define do
   factory :report_recipient do
     email 'dude@example.com'
   end
