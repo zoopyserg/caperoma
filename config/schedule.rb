@@ -1,21 +1,19 @@
 # frozen_string_literal: true
 
-# every :weekday, at: '10pm' do
-#   command 'caperoma daily_report'
-# end
-#
-# every 10.minutes do
-#   command 'caperoma copy_airbrake_emails_to_pivotal'
-# end
-#
-# every :wednesday, at: '10pm' do
-#   command 'caperoma three_day_report'
-# end
-#
-# every :friday, at: '10pm' do
-#   command 'caperoma three_day_report'
-# end
-#
-# every :friday, at: '10pm' do
-#   command 'caperoma retrospective_report'
-# end
+set :job_template, nil
+
+every :weekday, at: '5:00pm' do
+  command "caperoma report daily"
+end
+
+every :wednesday, at: '5:05pm' do
+  command "caperoma report three_day"
+end
+
+every :friday, at: '5:05pm' do
+  command "caperoma report three_day"
+end
+
+every :friday, at: '5:10pm' do
+  command "caperoma report weekly"
+end
