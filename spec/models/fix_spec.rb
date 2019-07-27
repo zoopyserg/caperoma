@@ -10,10 +10,10 @@ RSpec.describe Fix, type: :model do
   describe 'transitions' do
     let(:fix) { create :fix }
 
-    it { expect {fix.swing!}.to output(/swing/).to_stdout }
-    it { expect {fix.swing!}.to output(/swong/).to_stdout }
-    it { expect {fix.swing!}.to output(/swung/).to_stdout }
-    it { expect {fix.swing!}.to output(/sweng/).to_stdout }
+    it { expect { fix.swing! }.to output(/swing/).to_stdout }
+    it { expect { fix.swing! }.to output(/swong/).to_stdout }
+    it { expect { fix.swing! }.to output(/swung/).to_stdout }
+    it { expect { fix.swing! }.to output(/sweng/).to_stdout }
   end
 
   describe 'methods' do

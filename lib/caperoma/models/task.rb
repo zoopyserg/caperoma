@@ -16,83 +16,83 @@ class Task < ActiveRecord::Base
   scope :unfinished, -> { where(finished_at: nil) }
   scope :finished, -> { where.not(finished_at: nil) }
 
-  aasm column: 'state', whiny_transitions: false do 
+  aasm column: 'state', whiny_transitions: false do
     state :created, initial: true
     state :started
     state :finished
     state :paused
     state :aborted
     state :aborted_without_time
-    
-    event :start, binding_events: [:set_start_time, :create_jira_in_jira_namespace, :start_jira_in_jira_namespace, :create_pivotal_in_pivotal_namespace, :start_pivotal_in_pivotal_namespace], before: [:test_if_working, :say_starting], after: [:say_started] do 
+
+    event :start, binding_events: %i[set_start_time create_jira_in_jira_namespace start_jira_in_jira_namespace create_pivotal_in_pivotal_namespace start_pivotal_in_pivotal_namespace], before: %i[test_if_working say_starting], after: [:say_started] do
       transitions from: :created, to: :started
     end
 
-    event :finish, binding_events: [:close_jira_in_jira_namespace, :finish_pivotal_in_pivotal_namespace], before: [:say_finishing, :save_finished_time], after: [:show_time_spent, :say_finished] do
+    event :finish, binding_events: %i[close_jira_in_jira_namespace finish_pivotal_in_pivotal_namespace], before: %i[say_finishing save_finished_time], after: %i[show_time_spent say_finished] do
       transitions from: :started, to: :finished
     end
 
-    event :pause, binding_events: [:close_jira_in_jira_namespace, :finish_pivotal_in_pivotal_namespace], before: [:say_pausing, :save_finished_time], after: [:show_time_spent, :say_paused] do
+    event :pause, binding_events: %i[close_jira_in_jira_namespace finish_pivotal_in_pivotal_namespace], before: %i[say_pausing save_finished_time], after: %i[show_time_spent say_paused] do
       transitions from: :started, to: :paused
     end
 
-    event :abort, binding_events: [:close_jira_in_jira_namespace, :finish_pivotal_in_pivotal_namespace], before: [:say_aborting, :save_finished_time], after: [:show_time_spent, :say_aborted] do
+    event :abort, binding_events: %i[close_jira_in_jira_namespace finish_pivotal_in_pivotal_namespace], before: %i[say_aborting save_finished_time], after: %i[show_time_spent say_aborted] do
       transitions from: :started, to: :aborted
     end
 
-    event :abort_without_time, binding_events: [:close_jira_in_jira_namespace], before: [:say_aborting_without_time, :save_finished_time], after: [:show_time_spent, :say_aborted_without_time] do
+    event :abort_without_time, binding_events: [:close_jira_in_jira_namespace], before: %i[say_aborting_without_time save_finished_time], after: %i[show_time_spent say_aborted_without_time] do
       transitions from: :started, to: :aborted_without_time
     end
   end
 
-  aasm(:jira, namespace: :in_jira_namespace, column: 'jira_state', whiny_transitions: false) do 
+  aasm(:jira, namespace: :in_jira_namespace, column: 'jira_state', whiny_transitions: false) do
     state :pending_jira, initial: true
     state :created_jira
     state :started_jira
     state :closed_jira
 
-    event :create_jira, binding_events: [ :show_created_issue_on_jira_status_in_created_issue_on_jira_status_namespace, :show_no_access_to_create_issue_on_jira_status_in_no_access_to_create_issue_on_jira_status_namespace, :show_no_connection_trying_to_create_issue_on_jira_status_in_no_connection_trying_to_create_issue_on_jira_status_namespace, :show_unknown_error_trying_to_create_issue_on_jira_status_in_unknown_error_trying_to_create_issue_on_jira_status_namespace ], before: [:say_creating_in_jira], after: [:output_jira_key], guards: [:not_test?, :create_on_jira?] do
+    event :create_jira, binding_events: %i[show_created_issue_on_jira_status_in_created_issue_on_jira_status_namespace show_no_access_to_create_issue_on_jira_status_in_no_access_to_create_issue_on_jira_status_namespace show_no_connection_trying_to_create_issue_on_jira_status_in_no_connection_trying_to_create_issue_on_jira_status_namespace show_unknown_error_trying_to_create_issue_on_jira_status_in_unknown_error_trying_to_create_issue_on_jira_status_namespace], before: [:say_creating_in_jira], after: [:output_jira_key], guards: %i[not_test? create_on_jira?] do
       transitions from: :pending_jira, to: :created_jira
     end
 
-    event :start_jira, binding_events: [ :show_started_issue_on_jira_statu_in_started_issue_on_jira_statu_namespace , :show_no_access_to_start_issue_on_jira_statu_in_no_access_to_start_issue_on_jira_statu_namespace , :show_no_connection_to_start_issue_on_jira_statu_in_no_connection_to_start_issue_on_jira_statu_namespace , :show_unknown_error_on_starting_issue_on_jira_status_in_unknown_error_on_starting_issue_on_jira_status_namespace ], before: [:say_starting_in_jira], guards: [:not_test?, :start_on_jira?] do
+    event :start_jira, binding_events: %i[show_started_issue_on_jira_statu_in_started_issue_on_jira_statu_namespace show_no_access_to_start_issue_on_jira_statu_in_no_access_to_start_issue_on_jira_statu_namespace show_no_connection_to_start_issue_on_jira_statu_in_no_connection_to_start_issue_on_jira_statu_namespace show_unknown_error_on_starting_issue_on_jira_status_in_unknown_error_on_starting_issue_on_jira_status_namespace], before: [:say_starting_in_jira], guards: %i[not_test? start_on_jira?] do
       transitions from: :created_jira, to: :started_jira
     end
 
-    event :close_jira, binding_events: [ :show_closed_issue_on_jira_statu_in_closed_issue_on_jira_statu_namespace , :show_no_access_to_close_issue_on_jira_statu_in_no_access_to_close_issue_on_jira_statu_namespace , :show_no_connection_to_close_issue_on_jira_statu_in_no_connection_to_close_issue_on_jira_statu_namespace , :show_unknown_error_closing_issue_on_jira_status_in_unknown_error_closing_issue_on_jira_status_namespace ], before: [:say_closing_in_jira], guards: :not_test? do
+    event :close_jira, binding_events: %i[show_closed_issue_on_jira_statu_in_closed_issue_on_jira_statu_namespace show_no_access_to_close_issue_on_jira_statu_in_no_access_to_close_issue_on_jira_statu_namespace show_no_connection_to_close_issue_on_jira_statu_in_no_connection_to_close_issue_on_jira_statu_namespace show_unknown_error_closing_issue_on_jira_status_in_unknown_error_closing_issue_on_jira_status_namespace], before: [:say_closing_in_jira], guards: :not_test? do
       transitions from: :started_jira, to: :closed_jira
     end
   end
 
-  aasm(:pivotal, namespace: :in_pivotal_namespace, column: 'pivotal_state', whiny_transitions: false) do 
+  aasm(:pivotal, namespace: :in_pivotal_namespace, column: 'pivotal_state', whiny_transitions: false) do
     state :pending_pivotal, initial: true
     state :created_pivotal
     state :started_pivotal
     state :finished_pivotal
 
-    event :create_pivotal, binding_events: [ :show_created_issue_on_pivotal_statu_in_created_issue_on_pivotal_statu_namespace , :show_no_access_trying_to_create_issue_on_pivotal_statu_in_no_access_trying_to_create_issue_on_pivotal_statu_namespace , :show_no_connection_trying_to_create_issue_on_pivotal_statu_in_no_connection_trying_to_create_issue_on_pivotal_statu_namespace , :show_unknown_error_trying_to_create_issue_on_pivotal_status_in_unknown_error_trying_to_create_issue_on_pivotal_status_namespace ], before: [:say_creating_in_pivotal], guards: [:not_test?, :create_on_pivotal?] do
+    event :create_pivotal, binding_events: %i[show_created_issue_on_pivotal_statu_in_created_issue_on_pivotal_statu_namespace show_no_access_trying_to_create_issue_on_pivotal_statu_in_no_access_trying_to_create_issue_on_pivotal_statu_namespace show_no_connection_trying_to_create_issue_on_pivotal_statu_in_no_connection_trying_to_create_issue_on_pivotal_statu_namespace show_unknown_error_trying_to_create_issue_on_pivotal_status_in_unknown_error_trying_to_create_issue_on_pivotal_status_namespace], before: [:say_creating_in_pivotal], guards: %i[not_test? create_on_pivotal?] do
       transitions from: :pending_pivotal, to: :created_pivotal
     end
 
-    event :start_pivotal, binding_events: [ :show_start_on_pivotal_statu_in_start_on_pivotal_statu_namespace , :show_no_access_to_start_issue_on_pivotal_statu_in_no_access_to_start_issue_on_pivotal_statu_namespace , :show_no_connection_to_start_issue_on_pivotal_statu_in_no_connection_to_start_issue_on_pivotal_statu_namespace , :show_unknown_error_on_starting_issue_on_pivotal_status_in_unknown_error_on_starting_issue_on_pivotal_status_namespace ], before: [:say_starting_in_pivotal], guards: [:not_test?, :start_on_pivotal?] do
+    event :start_pivotal, binding_events: %i[show_start_on_pivotal_statu_in_start_on_pivotal_statu_namespace show_no_access_to_start_issue_on_pivotal_statu_in_no_access_to_start_issue_on_pivotal_statu_namespace show_no_connection_to_start_issue_on_pivotal_statu_in_no_connection_to_start_issue_on_pivotal_statu_namespace show_unknown_error_on_starting_issue_on_pivotal_status_in_unknown_error_on_starting_issue_on_pivotal_status_namespace], before: [:say_starting_in_pivotal], guards: %i[not_test? start_on_pivotal?] do
       transitions from: :created_pivotal, to: :started_pivotal
     end
 
-    event :finish_pivotal, before: [:say_finishing_in_pivotal, :show_finished_on_pivotal_statu_in_finished_on_pivotal_statu_namespace , :show_no_access_to_finish_on_pivotal_statu_in_no_access_to_finish_on_pivotal_statu_namespace , :show_no_connection_to_finish_on_pivotal_statu_in_no_connection_to_finish_on_pivotal_statu_namespace , :show_unknown_error_on_finishing_on_pivotal_status_in_unknown_error_on_finishing_on_pivotal_status_namespace ], guards: [:not_test?, :finish_on_pivotal?] do
+    event :finish_pivotal, before: %i[say_finishing_in_pivotal show_finished_on_pivotal_statu_in_finished_on_pivotal_statu_namespace show_no_access_to_finish_on_pivotal_statu_in_no_access_to_finish_on_pivotal_statu_namespace show_no_connection_to_finish_on_pivotal_statu_in_no_connection_to_finish_on_pivotal_statu_namespace show_unknown_error_on_finishing_on_pivotal_status_in_unknown_error_on_finishing_on_pivotal_status_namespace], guards: %i[not_test? finish_on_pivotal?] do
       transitions from: :started_pivotal, to: :finished_pivotal
     end
   end
 
-  aasm(:jira_worklog, namespace: :in_jira_worklog_namespace, column: 'jira_worklog_state', whiny_transitions: false) do 
+  aasm(:jira_worklog, namespace: :in_jira_worklog_namespace, column: 'jira_worklog_state', whiny_transitions: false) do
     state :pending_jira_worklog, initial: true
     state :created_jira_worklog
 
-    event :create_jira_worklog, binding_events: [ :show_loged_work_to_jira_statu_in_loged_work_to_jira_statu_namespace , :show_no_access_to_log_work_to_jira_statu_in_no_access_to_log_work_to_jira_statu_namespace , :show_no_connection_to_log_work_to_jira_statu_in_no_connection_to_log_work_to_jira_statu_namespace , :show_unknown_error_loging_work_to_jira_status_in_unknown_error_loging_work_to_jira_status_namespace ], before: [:say_logging_started], guards: [:not_test?, :should_log_work?] do
+    event :create_jira_worklog, binding_events: %i[show_loged_work_to_jira_statu_in_loged_work_to_jira_statu_namespace show_no_access_to_log_work_to_jira_statu_in_no_access_to_log_work_to_jira_statu_namespace show_no_connection_to_log_work_to_jira_statu_in_no_connection_to_log_work_to_jira_statu_namespace show_unknown_error_loging_work_to_jira_status_in_unknown_error_loging_work_to_jira_status_namespace], before: [:say_logging_started], guards: %i[not_test? should_log_work?] do
       transitions from: :pending_jira_worklog, to: :created_jira_worklog
     end
   end
 
-  aasm(:jira_key, namespace: :in_jira_key_namespace, column: 'jira_key_state', whiny_transitions: false) do 
+  aasm(:jira_key, namespace: :in_jira_key_namespace, column: 'jira_key_state', whiny_transitions: false) do
     state :hidden_jira_key, initial: true
     state :shown_jira_key
 
@@ -101,7 +101,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:start_on_pivotal_status, namespace: :in_start_on_pivotal_status_namespace, column: 'start_on_pivotal_status_state', whiny_transitions: false) do 
+  aasm(:start_on_pivotal_status, namespace: :in_start_on_pivotal_status_namespace, column: 'start_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_start_on_pivotal_status, initial: true
     state :shown_start_on_pivotal_status
 
@@ -110,7 +110,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:no_access_to_start_issue_on_pivotal_status, namespace: :in_no_access_to_start_issue_on_pivotal_status_namespace, column: 'no_access_to_start_issue_on_pivotal_status_state', whiny_transitions: false) do 
+  aasm(:no_access_to_start_issue_on_pivotal_status, namespace: :in_no_access_to_start_issue_on_pivotal_status_namespace, column: 'no_access_to_start_issue_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_no_access_to_start_issue_on_pivotal_status, initial: true
     state :shown_no_access_to_start_issue_on_pivotal_status
 
@@ -119,7 +119,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:no_connection_to_start_issue_on_pivotal_status, namespace: :in_no_connection_to_start_issue_on_pivotal_status_namespace, column: 'no_connection_to_start_issue_on_pivotal_status_state', whiny_transitions: false) do 
+  aasm(:no_connection_to_start_issue_on_pivotal_status, namespace: :in_no_connection_to_start_issue_on_pivotal_status_namespace, column: 'no_connection_to_start_issue_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_no_connection_to_start_issue_on_pivotal_status, initial: true
     state :shown_no_connection_to_start_issue_on_pivotal_status
 
@@ -128,7 +128,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:unknown_error_on_starting_issue_on_pivotal_status, namespace: :in_unknown_error_on_starting_issue_on_pivotal_status_namespace, column: 'unknown_error_on_starting_issue_on_pivotal_status_state', whiny_transitions: false) do 
+  aasm(:unknown_error_on_starting_issue_on_pivotal_status, namespace: :in_unknown_error_on_starting_issue_on_pivotal_status_namespace, column: 'unknown_error_on_starting_issue_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_unknown_error_on_starting_issue_on_pivotal_status, initial: true
     state :shown_unknown_error_on_starting_issue_on_pivotal_status
 
@@ -136,8 +136,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_unknown_error_on_starting_issue_on_pivotal_status, to: :shown_unknown_error_on_starting_issue_on_pivotal_status
     end
   end
-  
-  aasm(:finished_on_pivotal_status, namespace: :in_finished_on_pivotal_status_namespace, column: 'finished_on_pivotal_status_state', whiny_transitions: false) do 
+
+  aasm(:finished_on_pivotal_status, namespace: :in_finished_on_pivotal_status_namespace, column: 'finished_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_finished_on_pivotal_status, initial: true
     state :shown_finished_on_pivotal_status
 
@@ -145,8 +145,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_finished_on_pivotal_status, to: :shown_finished_on_pivotal_status
     end
   end
-  
-  aasm(:no_access_to_finish_on_pivotal_status, namespace: :in_no_access_to_finish_on_pivotal_status_namespace, column: 'no_access_to_finish_on_pivotal_status_state', whiny_transitions: false) do 
+
+  aasm(:no_access_to_finish_on_pivotal_status, namespace: :in_no_access_to_finish_on_pivotal_status_namespace, column: 'no_access_to_finish_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_no_access_to_finish_on_pivotal_status, initial: true
     state :shown_no_access_to_finish_on_pivotal_status
 
@@ -154,8 +154,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_no_access_to_finish_on_pivotal_status, to: :shown_no_access_to_finish_on_pivotal_status
     end
   end
-  
-  aasm(:no_connection_to_finish_on_pivotal_status, namespace: :in_no_connection_to_finish_on_pivotal_status_namespace, column: 'no_connection_to_finish_on_pivotal_status_state', whiny_transitions: false) do 
+
+  aasm(:no_connection_to_finish_on_pivotal_status, namespace: :in_no_connection_to_finish_on_pivotal_status_namespace, column: 'no_connection_to_finish_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_no_connection_to_finish_on_pivotal_status, initial: true
     state :shown_no_connection_to_finish_on_pivotal_status
 
@@ -163,8 +163,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_no_connection_to_finish_on_pivotal_status, to: :shown_no_connection_to_finish_on_pivotal_status
     end
   end
-  
-  aasm(:unknown_error_on_finishing_on_pivotal_status, namespace: :in_unknown_error_on_finishing_on_pivotal_status_namespace, column: 'unknown_error_on_finishing_on_pivotal_status_state', whiny_transitions: false) do 
+
+  aasm(:unknown_error_on_finishing_on_pivotal_status, namespace: :in_unknown_error_on_finishing_on_pivotal_status_namespace, column: 'unknown_error_on_finishing_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_unknown_error_on_finishing_on_pivotal_status, initial: true
     state :shown_unknown_error_on_finishing_on_pivotal_status
 
@@ -172,8 +172,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_unknown_error_on_finishing_on_pivotal_status, to: :shown_unknown_error_on_finishing_on_pivotal_status
     end
   end
-  
-  aasm(:started_issue_on_jira_status, namespace: :in_started_issue_on_jira_status_namespace, column: 'started_issue_on_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:started_issue_on_jira_status, namespace: :in_started_issue_on_jira_status_namespace, column: 'started_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_started_issue_on_jira_status, initial: true
     state :shown_started_issue_on_jira_status
 
@@ -181,8 +181,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_started_issue_on_jira_status, to: :shown_started_issue_on_jira_status
     end
   end
-  
-  aasm(:no_access_to_start_issue_on_jira_status, namespace: :in_no_access_to_start_issue_on_jira_status_namespace, column: 'no_access_to_start_issue_on_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:no_access_to_start_issue_on_jira_status, namespace: :in_no_access_to_start_issue_on_jira_status_namespace, column: 'no_access_to_start_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_no_access_to_start_issue_on_jira_status, initial: true
     state :shown_no_access_to_start_issue_on_jira_status
 
@@ -190,8 +190,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_no_access_to_start_issue_on_jira_status, to: :shown_no_access_to_start_issue_on_jira_status
     end
   end
-  
-  aasm(:no_connection_to_start_issue_on_jira_status, namespace: :in_no_connection_to_start_issue_on_jira_status_namespace, column: 'no_connection_to_start_issue_on_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:no_connection_to_start_issue_on_jira_status, namespace: :in_no_connection_to_start_issue_on_jira_status_namespace, column: 'no_connection_to_start_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_no_connection_to_start_issue_on_jira_status, initial: true
     state :shown_no_connection_to_start_issue_on_jira_status
 
@@ -199,8 +199,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_no_connection_to_start_issue_on_jira_status, to: :shown_no_connection_to_start_issue_on_jira_status
     end
   end
-  
-  aasm(:unknown_error_on_starting_issue_on_jira_status, namespace: :in_unknown_error_on_starting_issue_on_jira_status_namespace, column: 'unknown_error_on_starting_issue_on_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:unknown_error_on_starting_issue_on_jira_status, namespace: :in_unknown_error_on_starting_issue_on_jira_status_namespace, column: 'unknown_error_on_starting_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_unknown_error_on_starting_issue_on_jira_status, initial: true
     state :shown_unknown_error_on_starting_issue_on_jira_status
 
@@ -208,8 +208,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_unknown_error_on_starting_issue_on_jira_status, to: :shown_unknown_error_on_starting_issue_on_jira_status
     end
   end
-  
-  aasm(:closed_issue_on_jira_status, namespace: :in_closed_issue_on_jira_status_namespace, column: 'closed_issue_on_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:closed_issue_on_jira_status, namespace: :in_closed_issue_on_jira_status_namespace, column: 'closed_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_closed_issue_on_jira_status, initial: true
     state :shown_closed_issue_on_jira_status
 
@@ -217,8 +217,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_closed_issue_on_jira_status, to: :shown_closed_issue_on_jira_status
     end
   end
-  
-  aasm(:no_access_to_close_issue_on_jira_status, namespace: :in_no_access_to_close_issue_on_jira_status_namespace, column: 'no_access_to_close_issue_on_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:no_access_to_close_issue_on_jira_status, namespace: :in_no_access_to_close_issue_on_jira_status_namespace, column: 'no_access_to_close_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_no_access_to_close_issue_on_jira_status, initial: true
     state :shown_no_access_to_close_issue_on_jira_status
 
@@ -226,8 +226,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_no_access_to_close_issue_on_jira_status, to: :shown_no_access_to_close_issue_on_jira_status
     end
   end
-  
-  aasm(:no_connection_to_close_issue_on_jira_status, namespace: :in_no_connection_to_close_issue_on_jira_status_namespace, column: 'no_connection_to_close_issue_on_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:no_connection_to_close_issue_on_jira_status, namespace: :in_no_connection_to_close_issue_on_jira_status_namespace, column: 'no_connection_to_close_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_no_connection_to_close_issue_on_jira_status, initial: true
     state :shown_no_connection_to_close_issue_on_jira_status
 
@@ -235,8 +235,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_no_connection_to_close_issue_on_jira_status, to: :shown_no_connection_to_close_issue_on_jira_status
     end
   end
-  
-  aasm(:unknown_error_closing_issue_on_jira_status, namespace: :in_unknown_error_closing_issue_on_jira_status_namespace, column: 'unknown_error_closing_issue_on_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:unknown_error_closing_issue_on_jira_status, namespace: :in_unknown_error_closing_issue_on_jira_status_namespace, column: 'unknown_error_closing_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_unknown_error_closing_issue_on_jira_status, initial: true
     state :shown_unknown_error_closing_issue_on_jira_status
 
@@ -244,8 +244,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_unknown_error_closing_issue_on_jira_status, to: :shown_unknown_error_closing_issue_on_jira_status
     end
   end
-  
-  aasm(:loged_work_to_jira_status, namespace: :in_loged_work_to_jira_status_namespace, column: 'loged_work_to_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:loged_work_to_jira_status, namespace: :in_loged_work_to_jira_status_namespace, column: 'loged_work_to_jira_status_state', whiny_transitions: false) do
     state :hidden_loged_work_to_jira_status, initial: true
     state :shown_loged_work_to_jira_status
 
@@ -253,8 +253,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_loged_work_to_jira_status, to: :shown_loged_work_to_jira_status
     end
   end
-  
-  aasm(:no_access_to_log_work_to_jira_status, namespace: :in_no_access_to_log_work_to_jira_status_namespace, column: 'no_access_to_log_work_to_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:no_access_to_log_work_to_jira_status, namespace: :in_no_access_to_log_work_to_jira_status_namespace, column: 'no_access_to_log_work_to_jira_status_state', whiny_transitions: false) do
     state :hidden_no_access_to_log_work_to_jira_status, initial: true
     state :shown_no_access_to_log_work_to_jira_status
 
@@ -262,8 +262,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_no_access_to_log_work_to_jira_status, to: :shown_no_access_to_log_work_to_jira_status
     end
   end
-  
-  aasm(:no_connection_to_log_work_to_jira_status, namespace: :in_no_connection_to_log_work_to_jira_status_namespace, column: 'no_connection_to_log_work_to_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:no_connection_to_log_work_to_jira_status, namespace: :in_no_connection_to_log_work_to_jira_status_namespace, column: 'no_connection_to_log_work_to_jira_status_state', whiny_transitions: false) do
     state :hidden_no_connection_to_log_work_to_jira_status, initial: true
     state :shown_no_connection_to_log_work_to_jira_status
 
@@ -271,8 +271,8 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_no_connection_to_log_work_to_jira_status, to: :shown_no_connection_to_log_work_to_jira_status
     end
   end
-  
-  aasm(:unknown_error_loging_work_to_jira_status, namespace: :in_unknown_error_loging_work_to_jira_status_namespace, column: 'unknown_error_loging_work_to_jira_status_state', whiny_transitions: false) do 
+
+  aasm(:unknown_error_loging_work_to_jira_status, namespace: :in_unknown_error_loging_work_to_jira_status_namespace, column: 'unknown_error_loging_work_to_jira_status_state', whiny_transitions: false) do
     state :hidden_unknown_error_loging_work_to_jira_status, initial: true
     state :shown_unknown_error_loging_work_to_jira_status
 
@@ -281,7 +281,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:created_issue_on_pivotal_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'created_issue_on_pivotal_status_state', whiny_transitions: false) do 
+  aasm(:created_issue_on_pivotal_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'created_issue_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_created_issue_on_pivotal_status, initial: true
     state :shown_created_issue_on_pivotal_status
 
@@ -290,7 +290,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:no_access_trying_to_create_issue_on_pivotal_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'no_access_trying_to_create_issue_on_pivotal_status_state', whiny_transitions: false) do 
+  aasm(:no_access_trying_to_create_issue_on_pivotal_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'no_access_trying_to_create_issue_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_created_issue_on_pivotal_status, initial: true
     state :shown_created_issue_on_pivotal_status
 
@@ -299,7 +299,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:no_connection_trying_to_create_issue_on_pivotal_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'no_connection_trying_to_create_issue_on_pivotal_status_state', whiny_transitions: false) do 
+  aasm(:no_connection_trying_to_create_issue_on_pivotal_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'no_connection_trying_to_create_issue_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_created_issue_on_pivotal_status, initial: true
     state :shown_created_issue_on_pivotal_status
 
@@ -308,7 +308,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:unknown_error_trying_to_create_issue_on_pivotal_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'unknown_error_trying_to_create_issue_on_pivotal_status_state', whiny_transitions: false) do 
+  aasm(:unknown_error_trying_to_create_issue_on_pivotal_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'unknown_error_trying_to_create_issue_on_pivotal_status_state', whiny_transitions: false) do
     state :hidden_created_issue_on_pivotal_status, initial: true
     state :shown_created_issue_on_pivotal_status
 
@@ -317,7 +317,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:created_issue_on_jira_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'created_issue_on_jira_status_state', whiny_transitions: false) do 
+  aasm(:created_issue_on_jira_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'created_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_created_issue_on_pivotal_status, initial: true
     state :shown_created_issue_on_pivotal_status
 
@@ -326,7 +326,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:no_access_to_create_issue_on_jira_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'no_access_to_create_issue_on_jira_status_state', whiny_transitions: false) do 
+  aasm(:no_access_to_create_issue_on_jira_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'no_access_to_create_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_created_issue_on_pivotal_status, initial: true
     state :shown_created_issue_on_pivotal_status
 
@@ -335,7 +335,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:no_connection_trying_to_create_issue_on_jira_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'no_connection_trying_to_create_issue_on_jira_status_state', whiny_transitions: false) do 
+  aasm(:no_connection_trying_to_create_issue_on_jira_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'no_connection_trying_to_create_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_created_issue_on_pivotal_status, initial: true
     state :shown_created_issue_on_pivotal_status
 
@@ -344,7 +344,7 @@ class Task < ActiveRecord::Base
     end
   end
 
-  aasm(:unknown_error_trying_to_create_issue_on_jira_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'unknown_error_trying_to_create_issue_on_jira_status_state', whiny_transitions: false) do 
+  aasm(:unknown_error_trying_to_create_issue_on_jira_status, namespace: :in_created_issue_on_pivotal_status_namespace, column: 'unknown_error_trying_to_create_issue_on_jira_status_state', whiny_transitions: false) do
     state :hidden_created_issue_on_pivotal_status, initial: true
     state :shown_created_issue_on_pivotal_status
 
@@ -352,30 +352,30 @@ class Task < ActiveRecord::Base
       transitions from: :hidden_created_issue_on_pivotal_status, to: :shown_created_issue_on_pivotal_status
     end
   end
-  
+
   def self.finish_started(comment)
-    unfinished.each do |task| 
+    unfinished.each do |task|
       task.update_column :comment, comment
       task.finish!
     end
   end
 
   def self.pause_started(comment)
-    unfinished.each do |task| 
+    unfinished.each do |task|
       task.update_column :comment, comment
       task.pause!
     end
   end
 
   def self.abort_started(comment)
-    unfinished.each do |task| 
+    unfinished.each do |task|
       task.update_column :comment, comment
       task.abort!
     end
   end
 
   def self.abort_started_without_time(comment)
-    unfinished.each do |task| 
+    unfinished.each do |task|
       task.update_column :comment, comment
       task.abort_without_time!
     end
@@ -430,6 +430,7 @@ class Task < ActiveRecord::Base
   end
 
   private
+
   def should_log_work?
     time_spent_so_far != '0h 0m' && Account.jira.present?
   end
@@ -567,7 +568,7 @@ class Task < ActiveRecord::Base
   end
 
   def started_issue_on_pivotal?
-    [ 200, 201, 202, 204, 301, 302, 303, 304, 307].include? start_issue_on_pivotal_response.status
+    [200, 201, 202, 204, 301, 302, 303, 304, 307].include? start_issue_on_pivotal_response.status
   end
 
   def say_started_issue_on_pivotal
@@ -575,7 +576,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_access_to_start_issue_on_pivotal?
-    [ 401, 403 ].include? start_issue_on_pivotal_response.status
+    [401, 403].include? start_issue_on_pivotal_response.status
   end
 
   def say_no_access_to_start_issue_on_pivotal
@@ -583,7 +584,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_connection_to_start_issue_on_pivotal?
-    [ 404 ].include? start_issue_on_pivotal_response.status
+    [404].include? start_issue_on_pivotal_response.status
   end
 
   def say_no_connection_to_start_issue_on_pivotal
@@ -591,7 +592,7 @@ class Task < ActiveRecord::Base
   end
 
   def unknown_error_on_starting_issue_on_pivotal?
-    not [ 200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? start_issue_on_pivotal_response.status
+    ![200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? start_issue_on_pivotal_response.status
   end
 
   def say_unknown_error_on_starting_issue_on_pivotal
@@ -621,7 +622,7 @@ class Task < ActiveRecord::Base
   end
 
   def finished_on_pivotal?
-    [ 200, 201, 202, 204, 301, 302, 303, 304, 307].include?  finish_on_pivotal_response.status
+    [200, 201, 202, 204, 301, 302, 303, 304, 307].include? finish_on_pivotal_response.status
   end
 
   def say_finished_on_pivotal
@@ -629,7 +630,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_access_to_finish_on_pivotal?
-    [ 401, 403 ].include?  finish_on_pivotal_response.status
+    [401, 403].include? finish_on_pivotal_response.status
   end
 
   def say_no_access_to_finish_on_pivotal
@@ -637,7 +638,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_connection_to_finish_on_pivotal?
-    [ 404 ].include?  finish_on_pivotal_response.status
+    [404].include?  finish_on_pivotal_response.status
   end
 
   def say_no_connection_to_finish_on_pivotal
@@ -645,7 +646,7 @@ class Task < ActiveRecord::Base
   end
 
   def unknown_error_on_finishing_on_pivotal?
-    not [ 200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include?  finish_on_pivotal_response.status
+    ![200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? finish_on_pivotal_response.status
   end
 
   def say_unknown_error_on_finishing_on_pivotal
@@ -674,7 +675,7 @@ class Task < ActiveRecord::Base
   end
 
   def started_issue_on_jira?
-    [ 200, 201, 202, 204, 301, 302, 303, 304, 307].include?  start_issue_on_jiraresponse.status
+    [200, 201, 202, 204, 301, 302, 303, 304, 307].include? start_issue_on_jiraresponse.status
   end
 
   def say_started_issue_on_jira
@@ -682,7 +683,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_access_to_start_issue_on_jira?
-    [ 401, 403 ].include?  start_issue_on_jiraresponse.status
+    [401, 403].include? start_issue_on_jiraresponse.status
   end
 
   def say_no_access_to_start_issue_on_jira
@@ -690,7 +691,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_connection_to_start_issue_on_jira?
-    [ 404 ].include?  start_issue_on_jiraresponse.status
+    [404].include?  start_issue_on_jiraresponse.status
   end
 
   def say_no_connection_to_start_issue_on_jira
@@ -698,7 +699,7 @@ class Task < ActiveRecord::Base
   end
 
   def unknown_error_on_starting_issue_on_jira?
-    not [ 200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include?  start_issue_on_jiraresponse.status
+    ![200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? start_issue_on_jiraresponse.status
   end
 
   def say_unknown_error_on_starting_issue_on_jira
@@ -726,7 +727,7 @@ class Task < ActiveRecord::Base
   end
 
   def closed_issue_on_jira?
-    [ 200, 201, 202, 204, 301, 302, 303, 304, 307].include?  close_issue_on_jira_response.status
+    [200, 201, 202, 204, 301, 302, 303, 304, 307].include? close_issue_on_jira_response.status
   end
 
   def say_closed_issue_on_jira
@@ -734,7 +735,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_access_to_close_issue_on_jira?
-    [ 401, 403 ].include?  close_issue_on_jira_response.status
+    [401, 403].include? close_issue_on_jira_response.status
   end
 
   def say_no_access_to_close_issue_on_jira
@@ -742,7 +743,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_connection_to_close_issue_on_jira?
-    [ 404 ].include?  close_issue_on_jira_response.status
+    [404].include?  close_issue_on_jira_response.status
   end
 
   def say_no_connection_to_close_issue_on_jira
@@ -750,7 +751,7 @@ class Task < ActiveRecord::Base
   end
 
   def unknown_error_closing_issue_on_jira?
-    not [ 200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include?  close_issue_on_jira_response.status
+    ![200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? close_issue_on_jira_response.status
   end
 
   def say_unknown_error_closing_issue_on_jira
@@ -781,7 +782,7 @@ class Task < ActiveRecord::Base
   end
 
   def loged_work_to_jira?
-    [ 200, 201, 202, 204, 301, 302, 303, 304, 307].include?  log_work_to_jira_response.status
+    [200, 201, 202, 204, 301, 302, 303, 304, 307].include? log_work_to_jira_response.status
   end
 
   def say_loged_work_to_jira
@@ -789,7 +790,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_access_to_log_work_to_jira?
-    [ 401, 403 ].include?  log_work_to_jira_response.status
+    [401, 403].include?  log_work_to_jira_response.status
   end
 
   def say_no_access_to_log_work_to_jira
@@ -797,7 +798,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_connection_to_log_work_to_jira?
-    [ 404 ].include?  log_work_to_jira_response.status
+    [404].include?  log_work_to_jira_response.status
   end
 
   def say_no_connection_to_log_work_to_jira
@@ -805,7 +806,7 @@ class Task < ActiveRecord::Base
   end
 
   def unknown_error_loging_work_to_jira?
-    not [ 200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include?  log_work_to_jira_response.status
+    ![200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? log_work_to_jira_response.status
   end
 
   def say_unknown_error_loging_work_to_jira
@@ -846,7 +847,7 @@ class Task < ActiveRecord::Base
   end
 
   def created_issue_on_pivotal?
-    [ 200, 201, 202, 204, 301, 302, 303, 304, 307].include? create_issue_on_pivotal_response.status
+    [200, 201, 202, 204, 301, 302, 303, 304, 307].include? create_issue_on_pivotal_response.status
   end
 
   def say_created_issue_on_pivotal
@@ -861,24 +862,24 @@ class Task < ActiveRecord::Base
     )
   end
 
-  def no_access_trying_to_create_issue_on_pivotal? 
-    [ 401, 403 ].include? create_issue_on_pivotal_response.status
+  def no_access_trying_to_create_issue_on_pivotal?
+    [401, 403].include? create_issue_on_pivotal_response.status
   end
 
   def say_no_access_trying_to_create_issue_on_pivotal
     puts "No access to the server. Maybe login, api_key or Pivotal Project ID ##{project.pivotal_tracker_project_id} is incorrect."
   end
 
-  def no_connection_trying_to_create_issue_on_pivotal? 
-    [ 404 ].include? create_issue_on_pivotal_response.status
+  def no_connection_trying_to_create_issue_on_pivotal?
+    [404].include? create_issue_on_pivotal_response.status
   end
 
   def say_no_connection_trying_to_create_issue_on_pivotal
     puts "Resource not found. Maybe Pivotal Project ID ##{project.pivotal_tracker_project_id} is incorrect."
   end
 
-  def unknown_error_trying_to_create_issue_on_pivotal? 
-    not [ 200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? create_issue_on_pivotal_response.status
+  def unknown_error_trying_to_create_issue_on_pivotal?
+    ![200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? create_issue_on_pivotal_response.status
   end
 
   def say_no_connection_trying_to_create_issue_on_pivotal
@@ -945,7 +946,7 @@ class Task < ActiveRecord::Base
   end
 
   def created_issue_on_jira?
-    [ 200, 201, 202, 204, 301, 302, 303, 304, 307].include?  create_issue_on_jira_response.status
+    [200, 201, 202, 204, 301, 302, 303, 304, 307].include? create_issue_on_jira_response.status
   end
 
   def say_created_issue_on_jira
@@ -953,7 +954,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_access_to_create_issue_on_jira?
-    [ 401, 403 ].include?  create_issue_on_jira_response.status
+    [401, 403].include? create_issue_on_jira_response.status
   end
 
   def say_no_access_to_create_issue_on_jira
@@ -971,7 +972,7 @@ class Task < ActiveRecord::Base
   end
 
   def no_connection_trying_to_create_issue_on_jira?
-    [ 404 ].include?  create_issue_on_jira_response.status
+    [404].include? create_issue_on_jira_response.status
   end
 
   def say_no_connection_trying_to_create_issue_on_jira
@@ -979,7 +980,7 @@ class Task < ActiveRecord::Base
   end
 
   def unknown_error_trying_to_create_issue_on_jira?
-    not [ 200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? create_issue_on_jira_response.status
+    ![200, 201, 202, 204, 301, 302, 303, 304, 307, 401, 403, 404].include? create_issue_on_jira_response.status
   end
 
   def say_unknown_error_trying_to_create_issue_on_jira

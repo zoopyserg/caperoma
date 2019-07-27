@@ -56,10 +56,10 @@ RSpec.describe Task, type: :model do
   describe 'status changes' do
     let!(:task) { create :task }
 
-    it { 
+    it {
       pp task.methods
-      expect(task).to transition_from(:created).to(:started).on_event(:start!).on(:workflow) }
-
+      expect(task).to transition_from(:created).to(:started).on_event(:start!).on(:workflow)
+    }
   end
 
   describe 'class_methods' do

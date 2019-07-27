@@ -3,6 +3,7 @@
 source 'https://rubygems.org'
 
 # Runtime dependencies
+gem 'aasm'
 gem 'actionpack'
 gem 'actionview'
 gem 'activerecord'
@@ -13,10 +14,10 @@ gem 'rubocop'
 gem 'sqlite3'
 gem 'time_difference'
 gem 'whenever', require: false
-gem 'aasm'
 
 group :development do
   gem 'bundler'
+  gem 'byebug'
   gem 'database_cleaner'
   gem 'factory_girl'
   gem 'juwelier'
@@ -25,7 +26,6 @@ group :development do
   gem 'shoulda'
   gem 'shoulda-matchers'
   gem 'timecop'
-  gem 'byebug'
 end
 
 group :test do

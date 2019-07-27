@@ -6,7 +6,7 @@ class Fix < TaskWithCommit
   after_create :inform_creation_finished
 
   def swing_methods
-    [:say_swing, :say_swong, :say_swung]
+    %i[say_swing say_swong say_swung]
   end
 
   def say_sweng
