@@ -3,7 +3,7 @@
 class TaskWithSeparateBranch < TaskWithCommit
   before_create :update_parent_branch
   before_create :remember_parent_branch
-  before_create :set_branch
+  after_create :set_branch
   after_create :git_branch
 
   def finish(comment)
@@ -33,7 +33,7 @@ class TaskWithSeparateBranch < TaskWithCommit
   end
 
   def set_branch
-    self.branch = branch_name
+    update_column :branch, branch_name
   end
 
   def branch_name
