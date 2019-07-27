@@ -59,7 +59,7 @@ $ caperoma projects
 - *If the -p parameter is specified, Caperoma starts Pivotal task with this ID.*
 - *If the -p parameter is not specified, Caperoma will create a new task in Pivotal, start it and use its ID.*
 - *The creation of certain types of tasks in Pivotal (when -p is absent) can be turned on or off in Capefile.*
-- *If you are already working on something, you won't be able to start a new task. First you will have to finish or pause the current task.*
+- *If you are already working on something, you won't be able to start a new task. First, you will have to finish or pause the current task.*
 
 `options`:
 
@@ -319,7 +319,7 @@ Keeps the folders of your projects intact.
 
 
 ### Deleting all tasks from this computer
-`caperoma delete_tasks` - removes the tasks from the database, so deletes the information on the task names, time spent, branch names etc.
+`caperoma delete_tasks` - removes the tasks from the database, so deletes the information on the task names, time spent, branch names, etc.
 
 Keeps other settings (accounts, projects) and the folders of your projects intact.
 

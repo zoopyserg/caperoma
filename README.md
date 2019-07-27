@@ -212,7 +212,7 @@ caperoma finish "I made a new file"
 ## Demo 5: A feature with adding time (in minutes):
 ```bash
 caperoma feature --title "your third feature" --pivotal_task_id 12345678 --additional_time 23
-# Or shorter version: 
+# Or a shorter version: 
 caperoma feature -t "your third feature" -p 12345678 -a 23
 # same as Demo 4, but notice -a 23 parameter.
 # -a 23 says to add 23 minutes on top of time recorded by the timer.
@@ -329,7 +329,7 @@ $ caperoma projects
 - *If the -p parameter is specified, Caperoma starts Pivotal task with this ID.*
 - *If the -p parameter is not specified, Caperoma will create a new task in Pivotal, start it and use its ID.*
 - *The creation of certain types of tasks in Pivotal (when -p is absent) can be turned on or off in Capefile.*
-- *If you are already working on something, you won't be able to start a new task. First you will have to finish or pause the current task.*
+- *If you are already working on something, you won't be able to start a new task. First, you will have to finish or pause the current task.*
 
 `options`:
 
@@ -589,7 +589,7 @@ Keeps the folders of your projects intact.
 
 
 ### Deleting all tasks from this computer
-`caperoma delete_tasks` - removes the tasks from the database, so deletes the information on the task names, time spent, branch names etc.
+`caperoma delete_tasks` - removes the tasks from the database, so deletes the information on the task names, time spent, branch names, etc.
 
 Keeps other settings (accounts, projects) and the folders of your projects intact.
 
