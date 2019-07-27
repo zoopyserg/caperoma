@@ -7,15 +7,6 @@ RSpec.describe Fix, type: :model do
     it { expect(subject).to be_a_kind_of TaskWithCommit }
   end
 
-  describe 'transitions' do
-    let(:fix) { create :fix }
-
-    it { expect { fix.swing! }.to output(/swing/).to_stdout }
-    it { expect { fix.swing! }.to output(/swong/).to_stdout }
-    it { expect { fix.swing! }.to output(/swung/).to_stdout }
-    it { expect { fix.swing! }.to output(/sweng/).to_stdout }
-  end
-
   describe 'methods' do
     describe 'description' do
       let!(:task) { create :fix, description: 'blah' }

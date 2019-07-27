@@ -5,18 +5,6 @@ class Fix < TaskWithCommit
   before_create :inform_creation_started
   after_create :inform_creation_finished
 
-  def swing_methods
-    %i[say_swing say_swong say_swung]
-  end
-
-  def say_sweng
-    puts 'sweng'
-  end
-
-  def say_swung
-    puts 'swung'
-  end
-
   def description
     result = super
     last_commit = git_last_commit_name
