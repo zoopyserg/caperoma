@@ -8,8 +8,14 @@ Available commands
 ### Initialize
 `caperoma init` - initializes Caperoma inside a project (creates Capefile).
 
+### Get Project IDs from Jira 
+`caperoma get_jira_project_ids` - see what project IDs does your Jira support, to put them into the Capefile.
+
 ### Get Issue IDs from Jira 
 `caperoma get_jira_issue_type_ids` - see what issue IDs does your Jira support, to put them into the Capefile.
+
+### Get Transition IDs from Jira 
+`caperoma get_jira_transition_ids` - see what transition IDs does your Jira support, to put them into the Capefile.
 
 ### Status
 `caperoma status` - shows a task you are working on now.
@@ -30,6 +36,7 @@ $ caperoma status
 You are not working on anything now.
 ```
 
+### Projects List
 `caperoma projects` - shows the list of projects on this computer.
 Example:
 ```bash
@@ -52,16 +59,24 @@ $ caperoma projects
 - *If the -p parameter is specified, Caperoma starts Pivotal task with this ID.*
 - *If the -p parameter is not specified, Caperoma will create a new task in Pivotal, start it and use its ID.*
 - *The creation of certain types of tasks in Pivotal (when -p is absent) can be turned on or off in Capefile.*
-- *If you are already working on something, you won't be able to start a new task. You will have to finish or pause the current task.*
+- *If you are already working on something, you won't be able to start a new task. First, you will have to finish or pause the current task.*
 
 `options`:
-`-t, --title` - The name of the feature (for a commit, pull request, tasks in Jira and Pivotal). ` -t` and `--title` are different versions of the same option.
-`-d, --description` - The description (for a task in Jira and Pivotal).
-`-p, -ptid, --pivotal_task_id` - ID of task in Pivotal (automatically gets started/finished during the work on it in Caperoma).
-`-a, --additional_time` - Additional time (in minutes). Intended for cases when you want to indicate that you started working on it X minutes ago (X minutes before starting Caperoma timer). For example, for 1 hour you tried to reproduce the problem before you realized that you need to start a new task. Or if you forgot to start Caperoma. Additional time is always in minutes. Adding 125 minutes (-a 125) will mean that you spent 2h 5m on the task before turning on Caperoma timer.
 
-*The order of options is not important.
-Immediately after the operator must be a value.*
+`-t`, `--title` - The name of the feature (for a commit, pull request, tasks in Jira and Pivotal). ` -t` and `--title` are different versions of the same option.
+
+
+`-d`, `--description` - The description (for a task in Jira and Pivotal).
+
+
+`-p`, `-ptid`, `--pivotal_task_id` - ID of task in Pivotal (automatically gets started/finished during the work on it in Caperoma).
+
+
+`-a`, `--additional_time` - Additional time (in minutes). Intended for cases when you want to indicate that you started working on it X minutes ago (X minutes before starting Caperoma timer). For example, for 1 hour you tried to reproduce the problem before you realized that you need to start a new task. Or if you forgot to start Caperoma. Additional time is always in minutes. Adding 125 minutes (-a 125) will mean that you spent 2h 5m on the task before turning on Caperoma timer.
+
+*The order of options is not important.*
+
+*Immediately after the operator must be a value.*
 
 Examples:
 ```bash
@@ -76,12 +91,18 @@ caperoma feature -t "title" -d "description" -p 4830184 -a 48
 
 caperoma feature --title "title" --description "description" --pivotal_task_id 1000001 --additional_time 5
 # (create the feature "title" with the description of "description" and Pivotal ID #1000001, on which you started working 5 minutes ago)
+
+caperoma feature -p 12345678
+# (it will take title and description from Pivotal task with id 12345678)
 ```
 
 #### Start a Bug 
 `caperoma bug [options]` - Creates a bug in the new branch.
+
 Does almost the same thing as `caperoma feature`, just starts everywhere the tasks of a type "bug".
+
 `options`: same as for `caperoma feature`
+
 Example:
 ```bash
 caperoma bug -t "something isn't working" -a 20
@@ -90,13 +111,18 @@ caperoma bug -t "something isn't working" -a 20
 
 #### Start a Fix  
 `caperoma fix [options]` - Creates a fix in the CURRENT branch, doing at the end just "git push" into the branch, not a pull request.
+
 Everything else is almost the same as `caperoma feature`.
+
 This command is created for the cases when you already have a remote branch, or if you already made a pull request, and you need to go back to it and add something.
+
 This command considers the specifics of work with open pull requests and remote branches:
 - Downloads the latest version of the current branch before starting the work and again before pushing the changes.
 - Changes are made in a new commit instead of a potentially conflicting amend.
 - Leaves the title and description of pull requests.
+
 `options`: same as for `caperoma feature`
+
 Example:
 ```bash
 caperoma fix --title "Spelling fix" -d "Fix the spelling mistake"
@@ -105,15 +131,23 @@ caperoma fix --title "Spelling fix" -d "Fix the spelling mistake"
 
 #### Start a Meeting 
 `caperoma meeting [options]` - Creates a meeting.
+
 For cases when you need to record to Jira the facts of talking on the phone with your coworkers.
+
 Jira ID for the meeting (as for other types of tasks) can be set in Capefile (by default it has the same value as a chore).
+
 In Pivotal creating meetings is off by default. It can be turned on in Capefile. If it is on, Caperoma will create "chores".
+
 `options`: same as for `caperoma feature`
 
 This feature is sometimes used to automate logging phone calls to Jira.
+
 For example, in Skype, you could configure it to call the command `caperoma meeting -t "meeting"` when you pick up the phone and call `caperoma finish` when you hang up.
+
 As a result, Skype conversations will automatically be entered into Jira with accuracy up to a minute.
+
 5-10 people can participate in a conference call, so if each of them sets up Caperoma, you can save a couple of man-hours for each call.
+
 Example:
 ```bash
 caperoma meeting -t "title"
@@ -121,9 +155,13 @@ caperoma meeting -t "title"
 
 #### Start a Chore
 `caperoma chore [options]` - Creates a chore. Without branch and commit.
+
 For cases when the goal of the task is not committing code.
+
 For example, you need to configure something on a remote server.
+
 `options`: same as for `caperoma feature`
+
 Example:
 ```bash
 caperoma chore -t "going downtown to pick up a new computer" -a 10
@@ -134,6 +172,7 @@ caperoma chore -t "going downtown to pick up a new computer" -a 10
 
 #### Finish current task
 `caperoma finish [optional comment]` - ends a task of any type.
+
 Do everything that you usually do after finishing a task:
 - git commit (feature, bug, fix) [commit name consists of the task title, Jira ID and Pivotal ID]
 - runs style guide checks (rubocop -a)
@@ -155,29 +194,39 @@ caperoma finish "completed"
 
 #### Abort current task
 `caperoma abort [optional comment]` - finish without committing / pushing changes.
+
 This command does what you usually need to do to interrupt the task:
 - Logs time to Jira.
 - changes the status of Jira task to "done"
 - changes the status of Pivotal task to "finished"
 - switches to the main branch
+
 All changes to files remain uncommitted.
+
 Examples:
 ```bash
 caperoma abort "can't reproduce"
 # interrupt + write a comment "can't reproduce" in Jira
 
 caperoma abort
+# keep comment blank
 ```
 
 #### Abort current task without logging time
 `caperoma abort_without_time [optional comment]` - same as abort, but does not log time to Jira
+
 Only changes the status of Jira task to "done".
+
 Pivotal task remains started.
+
 Files remain uncommitted.
 
 Example:
+
 Suppose you started a task and fall asleep.
+
 You wake up, the timer is still running.
+
 You stop the timer without logging time to Jira:
 ```
 caperoma abort_without_time
@@ -185,6 +234,7 @@ caperoma abort_without_time
 
 #### Pause current task
 `caperoma pause [optional comment]` — stop work on the task, but not consider it completed (don't make a pull request).
+
 What it will do:
 - git commit (feature, bug, fix) [commit name consists of the task title, Jira ID and Pivotal ID]
 - runs style guide checks (rubocop -a)
@@ -200,6 +250,7 @@ To finish the paused task, you will need to manually switch into its branch and 
 Finishing the task will be done by new independent tasks in Jira.
 
 Example:
+
 Suppose you need to urgently switch to another task.
 ```bash
 ...
@@ -224,10 +275,15 @@ caperoma finish
 
 #### Adding Accounts
 `caperoma accounts [add command] [account_type] [login] [password] [assignee]` - add (or overwrite) an account of type [account_type] to the database.
+
 `[add command]`: `-a`, `add`, `--add`, `-c`, `create`, `--create` (all these are equivalent).
+
 `[account_type]`: One of: `--jira`, `--pivotal` `--git`, `--gmail`
+
 `[login]` is your account login (email or username).
+
 `[password]` for --jira and --pivotal should be api_tokens (password won't do). for --git and --gmail it should be your password.
+
 `[assignee]` is only for --jira, for other types no need to write anything there.
 
 Examples:
@@ -243,7 +299,9 @@ caperoma accounts --create --gmail login password   # Add Gmail account for repo
 
 #### Removing accounts
 `caperoma accounts [remove_command] [account_type]` - remove an account of a given type.
+
 `[remove_command]`: `remove`, `--remove`, `-r`, `delete`, `--delete`, `-d` (all these are equivalent).
+
 `[account_type]`: One of the following: `--jira`, `--pivotal`, `--git`, `--gmail`
 
 Examples:
@@ -256,10 +314,18 @@ caperoma accounts -delete --gmail # Remove Gmail account for reports
 
 ### Deleting all data from this computer
 `caperoma delete_history` - removes the caperoma database, so deletes the information on the tasks, time spent, branch names, account credentials, etc.
+
 Keeps the folders of your projects intact.
+
+
+### Deleting all tasks from this computer
+`caperoma delete_tasks` - removes the tasks from the database, so deletes the information on the task names, time spent, branch names, etc.
+
+Keeps other settings (accounts, projects) and the folders of your projects intact.
 
 ### Version:
 `caperoma -v` - shows Caperoma version
+
 `caperoma version` - shows Caperoma version
 
 ### Recipients
@@ -268,7 +334,9 @@ Keeps the folders of your projects intact.
 
 #### Adding Report Recipients:
 `caperoma recipients [add command] [email]` - adds an email of a recipient of your reports to the database.
+
 `[add command]`: `-a`, `add`, `--add`, `-c`, `create`, `--create` (all these are equivalent).
+
 `[email]` - the email of the recipient
 
 Examples:
@@ -282,6 +350,7 @@ caperoma recipients --add "your_techlead@domain.com"
 
 #### Removing Report Recipients
 `caperoma recipients [remove command] [email]` - removes the `[email]` of the recipient of your reports from the database.
+
 `[remove command]`: `remove`, `--remove`, `-r`, `delete`, `--delete`, `-d` (all these are equivalent).
 
 Examples:
@@ -293,17 +362,19 @@ caperoma recipients --delete "your_supervisor@domain.com"
 
 ### Automatic Reports
 `caperoma report auto on` - turns on automatic report sending to all your recipients.
+
 `caperoma report auto off` - turn off automatic report sending to all your recipients.
 
 ### Sending Reports Manually
-`caperoma report daily` - send a daily report right now
-`caperoma report -d` - send a daily report right now
+`caperoma report [option]` - send a report right now.
 
-`caperoma report three_day` - send a three-day report right now
-`caperoma report -t` - send a three-day report right now
+`[option]`:
 
-`caperoma report weekly` - send a weekly report right now
-`caperoma report -w` - send a weekly report right now
+`daily`, `-d` - send a daily report right now
+
+`three_day`, `-t` - send a three-day report right now
+
+`weekly`, `-w` - send a weekly report right now
 
 ### Support me on Patreon.
 https://www.patreon.com/sergevinogradoff

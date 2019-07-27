@@ -11,18 +11,18 @@ class Report < ApplicationRecord
   after_create :update_content
 
   def self.schedule
-    # may screw up existing cron tasks
     puts 'Turning on auto reports'
     root = File.dirname __dir__
-    crontab_file = File.join root, 'config', 'crontab'
-    `crontab #{crontab_file}`
-    # > whenever --update-crontab caperoma
+    crontab_config_file = File.join root, '..', '..', 'config', 'schedule.rb'
+    `whenever --update-crontab caperoma --load-file "#{crontab_config_file}"`
     puts 'Auto reports turned on'
   end
 
   def self.unschedule
     puts 'Turning off auto reports'
-    puts 'pending'
+    root = File.dirname __dir__
+    crontab_config_file = File.join root, '..', '..', 'config', 'unschedule.rb'
+    `whenever --update-crontab caperoma --load-file "#{crontab_config_file}"`
     puts 'Auto reports turned off'
   end
 
@@ -124,16 +124,16 @@ class Report < ApplicationRecord
     [
       "\n",
       "<h2>Done during #{timeframe}:</h2>",
-      "<br />",
-      "<table style=\"width: 100%;text-align: left;\">",
-      "<thead>",
-      "<tr><th>Jira</th><th>Pivotal</th><th>Title</th><th>Time spent</th></tr>",
-      "</thead>",
-      "<tbody>",
+      '<br />',
+      '<table style="width: 100%;text-align: left;">',
+      '<thead>',
+      '<tr><th>Jira</th><th>Pivotal</th><th>Title</th><th>Time spent</th></tr>',
+      '</thead>',
+      '<tbody>',
       reported_tasks_rows,
-      "</tbody>",
-      "</table>",
-      "<br />",
+      '</tbody>',
+      '</table>',
+      '<br />',
       "<strong>Total time spent during #{timeframe}:</strong> #{total_time_spent}."
     ].flatten.join("\n")
   end
@@ -143,7 +143,7 @@ class Report < ApplicationRecord
   end
 
   def table_row(task)
-    '<tr>' + task_row_data(task).collect{|task| '<td>' + task + '</td>' }.join("\n") + '</tr>'
+    '<tr>' + task_row_data(task).collect { |task| '<td>' + task + '</td>' }.join("\n") + '</tr>'
   end
 
   def task_row_data(task)

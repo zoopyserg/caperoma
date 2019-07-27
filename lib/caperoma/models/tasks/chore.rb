@@ -1,9 +1,11 @@
 # frozen_string_literal: true
+
 class Chore < Task
   before_create :inform_creation_started
   after_create :inform_creation_finished
 
   private
+
   def create_issue_on_pivotal_data
     Jbuilder.encode do |j|
       j.current_state 'unstarted'

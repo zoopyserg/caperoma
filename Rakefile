@@ -21,7 +21,7 @@ Juwelier::Tasks.new do |gem|
   gem.license = 'MIT'
   gem.summary = %(Automate your workflow with Ruby / Git / Jira / PivotalTracker.)
   gem.description = <<-EOF
-    Caperoma automates many decisions related to the programming that you often don't realize, and which you can forget hundreds of times during the time of working on the project: 
+    Caperoma automates many decisions related to the programming that you often don't realize, and which you can forget hundreds of times during the time of working on the project:
     - pulling the latest code from upstream before you start working,
     - remembering from which branch you started the feature to later make a pull request into it,
     - creating & starting tasks in Jira,
@@ -66,8 +66,10 @@ Juwelier::Tasks.new do |gem|
   gem.add_development_dependency 'shoulda-matchers', '~> 4.1.0'
   gem.add_development_dependency 'timecop', '~> 0.9.1'
 
-  gem.requirements << 'sqlite' 
-  gem.requirements << 'git'
+  gem.requirements << 'Ruby 2.4 or higher'
+  gem.requirements << 'SQLite'
+  gem.requirements << 'Git'
+  gem.requirements << 'Crontab'
 
   gem.extra_rdoc_files = ['README.md', 'HELP']
   gem.version = File.exist?('VERSION') ? File.read('VERSION') : ''

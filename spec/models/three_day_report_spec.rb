@@ -37,13 +37,12 @@ RSpec.describe ThreeDayReport, type: :model do
 
     describe 'message body', :unstub_puts do
       let(:report) { create :three_day_report }
-      let!(:task1) { create :task, jira_key: 'DOV-2', pivotal_id: 2345678, three_day_report: nil, finished_at: 2.days.ago }
-      let!(:task2) { create :task, jira_key: 'MOB-8', pivotal_id: 2345674, three_day_report: nil, finished_at: 1.day.ago }
+      let!(:task1) { create :task, jira_key: 'DOV-2', pivotal_id: 2_345_678, three_day_report: nil, finished_at: 2.days.ago }
+      let!(:task2) { create :task, jira_key: 'MOB-8', pivotal_id: 2_345_674, three_day_report: nil, finished_at: 1.day.ago }
 
       specify do
         expect(report.send(:report_body)).to match /table/
       end
-
     end
   end
 end

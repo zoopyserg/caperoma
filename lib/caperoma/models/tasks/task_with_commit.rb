@@ -1,20 +1,19 @@
 # frozen_string_literal: true
-class TaskWithCommit < Task
-  belongs_to :branch
 
+class TaskWithCommit < Task
   def finish(comment)
     super
     git_commit(commit_message)
     # here I should pass the path
-    `rubocop -a "#{project.folder_path}"` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
+    `rubocop -a "#{project.folder_path}"` if enable_rubocop?
     git_commit(commit_rubocop_message)
-    git_push 
+    git_push
   end
 
   def pause(comment)
     super
     git_commit(commit_message)
-    `rubocop -a "#{project.folder_path}"` if ENV['CAPEROMA_INTEGRATION_TEST'].blank? && ENV['CAPEROMA_TEST'].blank?
+    `rubocop -a "#{project.folder_path}"` if enable_rubocop?
     git_commit(commit_rubocop_message)
     git_push
   end
@@ -36,5 +35,9 @@ class TaskWithCommit < Task
     string += "[##{pivotal_id}]" if pivotal_id.present?
     string += ' Applying good practices'
     string.strip
+  end
+
+  def enable_rubocop?
+    ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
   end
 end

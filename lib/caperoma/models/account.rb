@@ -3,7 +3,7 @@
 class Account < ApplicationRecord
   self.inheritance_column = nil
 
-  validates :email, presence: true 
+  validates :email, presence: true
   validates :password, presence: true
   validates :type, presence: true, inclusion: { in: %w[--jira --pivotal --gmail --git --caperoma] }
 

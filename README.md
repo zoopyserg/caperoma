@@ -41,10 +41,12 @@ You focus only on solving tasks.
 <img src="images/circle.png" width="100%">
 Everything that is not underlined Caperoma does for you.
 
+The development of Caperoma is developing in the direction of closing this circle.
+
 ## Demo
 You need to make a feature.
 ```bash
-caperoma feature -t "your first feature"
+caperoma feature --title "your first feature"
 touch ./your_first_feature.rb
 rspec .
 caperoma finish
@@ -73,7 +75,7 @@ At the same time, tracking systems receive the most accurate information about t
 ## Demo 2
 You urgently need to fix the bug.
 ```bash
-caperoma bug -t "your urgent bugfix"
+caperoma bug --title "your urgent bugfix"
 touch ./your_urgent_bugfix.rb
 caperoma finish
 ```
@@ -97,10 +99,11 @@ You implemented the solution, but on the way to it, you were secured by the Cape
 
 Jira IDs for each of them, as well as other settings, can be set in `Capefile`.
 
-## Ubuntu Setup
-```bash
-sudo apt install -y sqlite3 crontab git
-```
+## System Requirements
+- Ruby 2.4 or higher
+- SQLite
+- Git
+- Crontab
 
 ## Installation
 ```bash
@@ -124,14 +127,48 @@ caperoma accounts add --git login password
 
 ## Setting up your project:
 ```bash
-cd ~/myproject # open your project
-caperoma init # create Capefile
-vim Capefile # open Capefile to enter the settings.
+# Open your project
+cd ~/myproject 
+
+# Create Capefile
+caperoma init 
+
+# Add your Jira link to Capefile: 
+echo "jira_url: https://yourproject.atlassian.net/" >> Capefile  
+
+# Get project IDs from Jira
+caperoma get_jira_project_ids
+# The response will be something like this:
+# 1) Awesome Project (jira_project_id: 1234)
+# ...
+
+# Paste the received project ID into Capefile
+echo "jira_project_id: 1234" >> Capefile
+
+# Get issue type IDs from Jira:  
+caperoma get_jira_issue_type_ids
+# The response will be something like this:
+# ID: 12, Name: Bug
+# ID: 15, Name: Feature
+# ...
+
+# Get transition type IDs from Jira:
+caperoma get_jira_transition_ids
+# This command requires you to have at least one issue in the project, as it will be used to receive transition ids.
+# The response will be something like this:
+# ID: 30, Name: To do
+# ID: 102, Name: In Progress
+# ID: 201, Name: Done
+
+# Enter the received IDs into corresponding fields in Capefile:
+vim Capefile 
+
+# Also, enter the rest of the settings into Capefile (git repository, Pivotal project ID, etc.).
 ```
 
 ## Demo 3: A simple feature.
 ```bash
-caperoma feature -t "your first feature"
+caperoma feature --title "your first feature"
 # Created a task in Jira with the title "your first feature".
 # Took the ID of the created Jira feature (i.e. PRJ -123).
 # Generated the name of the git branch considering Jira ID and task name (i.e. prj-123-your-first-feature).
@@ -158,11 +195,11 @@ caperoma finish
 
 ## Demo 4: A feature with Pivotal ID and your work description:
 ```bash
-caperoma feature --t "your second feature" -p 12345678
+caperoma feature --title "your second feature" --pivotal_task_id 12345678
 # Same as before, but also:
 # A Pivotal task was launched with ID #12345678.
 
-touch ./your_first_feature.rb
+touch ./your_second_feature.rb
 
 caperoma finish "I made a new file"
 # Same as before, but also:
@@ -174,12 +211,14 @@ caperoma finish "I made a new file"
 
 ## Demo 5: A feature with adding time (in minutes):
 ```bash
+caperoma feature --title "your third feature" --pivotal_task_id 12345678 --additional_time 23
+# Or a shorter version: 
 caperoma feature -t "your third feature" -p 12345678 -a 23
-# same as before (Demo 4), but notice -a 23 parameter.
+# same as Demo 4, but notice -a 23 parameter.
 # -a 23 says to add 23 minutes on top of time recorded by the timer.
 # The alternative version of this parameter is: --additional_time 23
 
-touch ./your_first_feature.rb
+touch ./your_third_feature.rb
 
 caperoma finish
 # Time sent to Jira will be 23 minutes more than the timer recorded.
@@ -239,8 +278,14 @@ caperoma report weekly # sends weekly report now
 ### Initialize
 `caperoma init` - initializes Caperoma inside a project (creates Capefile).
 
+### Get Project IDs from Jira 
+`caperoma get_jira_project_ids` - see what project IDs does your Jira support, to put them into the Capefile.
+
 ### Get Issue IDs from Jira 
 `caperoma get_jira_issue_type_ids` - see what issue IDs does your Jira support, to put them into the Capefile.
+
+### Get Transition IDs from Jira 
+`caperoma get_jira_transition_ids` - see what transition IDs does your Jira support, to put them into the Capefile.
 
 ### Status
 `caperoma status` - shows a task you are working on now.
@@ -253,7 +298,9 @@ Type: Feature
 Jira ID: PRJ-24 (https://example.atlassian.net/browse/PRJ-24)
 Pivotal ID: 167396414 (https://www.pivotaltracker.com/story/show/167396414)
 Time spent at the moment: 2h 50m
+Branch with the task: jr-124-some-task
 Pull request will be sent to this branch: master
+Project location: /path/to/the/project
 
 $ caperoma finish
 ...
@@ -261,6 +308,7 @@ $ caperoma status
 You are not working on anything now.
 ```
 
+### Projects List
 `caperoma projects` - shows the list of projects on this computer.
 Example:
 ```bash
@@ -283,7 +331,7 @@ $ caperoma projects
 - *If the -p parameter is specified, Caperoma starts Pivotal task with this ID.*
 - *If the -p parameter is not specified, Caperoma will create a new task in Pivotal, start it and use its ID.*
 - *The creation of certain types of tasks in Pivotal (when -p is absent) can be turned on or off in Capefile.*
-- *If you are already working on something, you won't be able to start a new task. First you will have to finish or pause the current task.*
+- *If you are already working on something, you won't be able to start a new task. First, you will have to finish or pause the current task.*
 
 `options`:
 
@@ -315,6 +363,9 @@ caperoma feature -t "title" -d "description" -p 4830184 -a 48
 
 caperoma feature --title "title" --description "description" --pivotal_task_id 1000001 --additional_time 5
 # (create the feature "title" with the description of "description" and Pivotal ID #1000001, on which you started working 5 minutes ago)
+
+caperoma feature -p 12345678
+# (it will take title and description from Pivotal task with id 12345678)
 ```
 
 #### Start a Bug 
@@ -430,6 +481,7 @@ caperoma abort "can't reproduce"
 # interrupt + write a comment "can't reproduce" in Jira
 
 caperoma abort
+# keep comment blank
 ```
 
 #### Abort current task without logging time
@@ -537,6 +589,12 @@ caperoma accounts -delete --gmail # Remove Gmail account for reports
 
 Keeps the folders of your projects intact.
 
+
+### Deleting all tasks from this computer
+`caperoma delete_tasks` - removes the tasks from the database, so deletes the information on the task names, time spent, branch names, etc.
+
+Keeps other settings (accounts, projects) and the folders of your projects intact.
+
 ### Version:
 `caperoma -v` - shows Caperoma version
 
@@ -580,17 +638,15 @@ caperoma recipients --delete "your_supervisor@domain.com"
 `caperoma report auto off` - turn off automatic report sending to all your recipients.
 
 ### Sending Reports Manually
-`caperoma report daily` - send a daily report right now
+`caperoma report [option]` - send a report right now.
 
-`caperoma report -d` - send a daily report right now
+`[option]`:
 
-`caperoma report three_day` - send a three-day report right now
+`daily`, `-d` - send a daily report right now
 
-`caperoma report -t` - send a three-day report right now
+`three_day`, `-t` - send a three-day report right now
 
-`caperoma report weekly` - send a weekly report right now
-
-`caperoma report -w` - send a weekly report right now
+`weekly`, `-w` - send a weekly report right now
 
 ### Support me on Patreon.
 https://www.patreon.com/sergevinogradoff

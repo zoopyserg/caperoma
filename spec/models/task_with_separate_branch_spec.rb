@@ -11,7 +11,7 @@ RSpec.describe TaskWithSeparateBranch, type: :model do
         allow_any_instance_of(TaskWithSeparateBranch).to receive(:description_for_pull_request).and_return 'pivotal-url'
         allow_any_instance_of(TaskWithSeparateBranch).to receive(:git_current_branch).and_return 'parent-branch'
 
-        expect(task).to receive(:git_pull_request).with('parent-branch', 'title', 'pivotal-url')
+        expect(task).to receive(:git_pull_request)
         expect(task).to receive(:git_checkout).with('parent-branch')
 
         task.finish(nil)
@@ -23,7 +23,7 @@ RSpec.describe TaskWithSeparateBranch, type: :model do
 
       it 'should commit with generated message' do
         allow_any_instance_of(TaskWithSeparateBranch).to receive(:description_for_pull_request).and_return 'pivotal-url'
-        expect(task).not_to receive(:git_pull_request).with('parent-branch', 'title', 'pivotal-url')
+        expect(task).not_to receive(:git_pull_request)
         expect(task).not_to receive(:git_checkout).with('parent-branch')
 
         task.pause(nil)
@@ -65,10 +65,10 @@ RSpec.describe TaskWithSeparateBranch, type: :model do
       end
     end
 
-    describe '::new_git_branch' do
+    describe '::git_branch' do
       it 'should make a new branch' do
         expect_any_instance_of(TaskWithSeparateBranch).to receive(:branch_name).and_return 'branch-name'
-        expect_any_instance_of(TaskWithSeparateBranch).to receive(:git_branch).with('branch-name')
+        expect_any_instance_of(TaskWithSeparateBranch).to receive(:git_branch)
 
         create :task_with_separate_branch
       end

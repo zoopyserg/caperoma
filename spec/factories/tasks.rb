@@ -1,6 +1,6 @@
 # frozen_string_literal: true
 
-FactoryBot.define do
+FactoryGirl.define do
   factory :task do
     project
 
@@ -20,7 +20,6 @@ FactoryBot.define do
   end
 
   factory :task_with_commit, parent: :task, class: 'TaskWithCommit' do
-    branch
   end
 
   factory :fix, parent: :task_with_commit, class: 'Fix' do

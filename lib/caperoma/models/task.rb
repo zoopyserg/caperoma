@@ -1,4 +1,5 @@
 # frozen_string_literal: true
+
 class Task < ActiveRecord::Base
   include Git
 
@@ -9,6 +10,8 @@ class Task < ActiveRecord::Base
 
   validates :title, presence: true
   validates :pivotal_id, length: { minimum: 6 }, allow_blank: true, numericality: { only_integer: true }
+
+  validates :additional_time, allow_blank: true, numericality: { only_integer: true }
 
   before_create :generate_uuid
   before_create :set_start_time
@@ -47,30 +50,29 @@ class Task < ActiveRecord::Base
   end
 
   def self.status
-    if unfinished.length == 0 
-      puts "You are not working on anything now." 
-    else 
-      unfinished.each do |task| 
-        puts "You are working on: "
+    if unfinished.empty?
+      puts 'You are not working on anything now.'
+    else
+      unfinished.each do |task|
+        puts 'You are working on: '
         puts "Title: #{task.title}"
         puts "Type: #{task.type}"
-        puts "Jira ID: #{task.jira_key}." if task.jira_key.present?
+        puts "Jira ID: #{task.jira_key} (#{task.jira_live_url})." if task.jira_key.present?
         puts "Pivotal ID: #{task.pivotal_id} (#{task.pivotal_url})" if task.pivotal_id.present?
         puts "Time spent at the moment: #{task.time_spent_so_far}"
+        puts "Branch with the task: #{task.branch}" if task.branch.present?
         puts "Pull request will be sent to this branch: #{task.parent_branch}" if task.parent_branch.present?
         puts "Project location: #{task.project.folder_path}"
       end
     end
   end
 
-  attr_writer :additional_time
-
   def finish(comment)
     # full pull request
     update_attribute(:finished_at, Time.now)
     close_issue_on_jira
-    log_work_to_jira(comment)
-    finish_on_pivotal if pivotal_id.present?
+    log_work_to_jira(comment) if should_log_work?
+    finish_on_pivotal if finish_on_pivotal?
     puts time_spent
   end
 
@@ -78,8 +80,8 @@ class Task < ActiveRecord::Base
     # finish with commit & push but without pull request
     update_attribute(:finished_at, Time.now)
     close_issue_on_jira
-    log_work_to_jira(comment)
-    finish_on_pivotal if pivotal_id.present?
+    log_work_to_jira(comment) if should_log_work?
+    finish_on_pivotal if finish_on_pivotal?
     puts time_spent
   end
 
@@ -87,17 +89,21 @@ class Task < ActiveRecord::Base
     # finish without commit or push
     update_attribute(:finished_at, Time.now)
     close_issue_on_jira
-    log_work_to_jira(comment)
-    finish_on_pivotal if pivotal_id.present?
+    log_work_to_jira(comment) if should_log_work?
+    finish_on_pivotal if finish_on_pivotal?
     puts time_spent
   end
 
-  def abort_without_time(comment)
+  def abort_without_time(_comment)
     # finish without commit or push
     update_attribute(:finished_at, Time.now)
     close_issue_on_jira
     # the task closes on Jira, but is still running in Pivotal
     puts time_spent
+  end
+
+  def should_log_work?
+    time_spent_so_far != '0h 0m' && Account.jira.present?
   end
 
   def time_spent_so_far
@@ -137,19 +143,23 @@ class Task < ActiveRecord::Base
   end
 
   def create_on_jira?
-    Account.jira.present? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+    Account.jira.present? && not_test?
   end
 
   def start_on_jira?
-    jira_key.present? && Account.jira.present? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+    jira_key.present? && Account.jira.present? && not_test?
   end
 
   def create_on_pivotal?
-    pivotal_id.blank? && this_is_a_type_a_user_wants_to_create? && Account.pivotal.present? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+    pivotal_id.blank? && this_is_a_type_a_user_wants_to_create? && Account.pivotal.present? && not_test?
   end
 
   def start_on_pivotal?
-    pivotal_id.present? && Account.pivotal.present? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+    pivotal_id.present? && Account.pivotal.present? && not_test?
+  end
+
+  def finish_on_pivotal?
+    pivotal_id.present? && Account.pivotal.present? && not_test?
   end
 
   def this_is_a_type_a_user_wants_to_create?
@@ -162,7 +172,7 @@ class Task < ActiveRecord::Base
 
   def set_start_time
     time = Time.now
-    time -= @additional_time.to_i.minutes if @additional_time.present?
+    time -= additional_time.to_i.minutes if additional_time.present?
     self.started_at = time
   end
 
@@ -171,7 +181,7 @@ class Task < ActiveRecord::Base
   end
 
   def output_jira_key?
-    jira_key.present? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+    jira_key.present? && not_test?
   end
 
   def start_issue_on_pivotal_data
@@ -182,6 +192,8 @@ class Task < ActiveRecord::Base
 
   def start_issue_on_pivotal
     if not_test?
+      puts 'Starting the task in Pivotal'
+
       conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
         c.adapter Faraday.default_adapter
       end
@@ -193,7 +205,22 @@ class Task < ActiveRecord::Base
         request.headers['Content-Type'] = 'application/json'
         request.headers['X-TrackerToken'] = Account.pivotal.password
       end
+
+      case response.status
+      when 200, 201, 202, 204, 301, 302, 303, 304, 307
+        puts 'Started the task in Pivotal'
+      when 401, 403
+        puts "No access to the task ##{pivotal_id} in Pivotal. Maybe login or api_key are incorrect."
+      when 404
+        puts "A task with ID ##{pivotal_id} is not found in Pivotal."
+      else
+        puts 'Could not start the task in Pivotal.'
+        puts "Error status: #{response.status}"
+        puts "Message from server: #{response.reason_phrase}"
+      end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Pivotal.'
   end
 
   def finish_on_pivotal_data
@@ -204,6 +231,8 @@ class Task < ActiveRecord::Base
 
   def finish_on_pivotal
     if not_test?
+      puts 'Finishing the task in Pivotal'
+
       conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
         c.adapter Faraday.default_adapter
       end
@@ -215,7 +244,22 @@ class Task < ActiveRecord::Base
         request.headers['Content-Type'] = 'application/json'
         request.headers['X-TrackerToken'] = Account.pivotal.password
       end
+
+      case response.status
+      when 200, 201, 202, 204, 301, 302, 303, 304, 307
+        puts 'Finished the task in Pivotal'
+      when 401, 403
+        puts "No access to the task ##{pivotal_id} in Pivotal. Maybe login or api_key are incorrect."
+      when 404
+        puts "A task with ID ##{pivotal_id} is not found in Pivotal."
+      else
+        puts 'Could not finish the task in Pivotal.'
+        puts "Error status: #{response.status}"
+        puts "Message from server: #{response.reason_phrase}"
+      end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Pivotal.'
   end
 
   def start_issue_on_jira_data
@@ -226,18 +270,35 @@ class Task < ActiveRecord::Base
 
   def start_issue_on_jira
     if not_test?
+      puts 'Starting the issue in Jira'
+
       conn = Faraday.new(url: project.jira_url) do |c|
         c.basic_auth(Account.jira.email, Account.jira.password)
         c.adapter Faraday.default_adapter
       end
 
-      conn.post do |request|
+      response = conn.post do |request|
         request.url "rest/api/3/issue/#{jira_key}/transitions"
         request.body = start_issue_on_jira_data
         request.headers['User-Agent'] = 'Caperoma'
         request.headers['Content-Type'] = 'application/json'
       end
+
+      case response.status
+      when 200, 201, 202, 204, 301, 302, 303, 304, 307
+        puts 'Started the issue in Jira'
+      when 401, 403
+        puts "No access to the task #{jira_key} in Jira. Maybe login or api_key are incorrect."
+      when 404
+        puts "A task with ID #{jira_key} is not found in Jira."
+      else
+        puts 'Could not start the issue in Jira.'
+        puts "Error status: #{response.status}"
+        puts "Message from server: #{response.reason_phrase}"
+      end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Jira.'
   end
 
   def close_issue_on_jira_data
@@ -248,6 +309,8 @@ class Task < ActiveRecord::Base
 
   def close_issue_on_jira
     if not_test?
+      puts 'Closing the issue in Jira'
+
       conn = Faraday.new(url: project.jira_url) do |c|
         c.basic_auth(Account.jira.email, Account.jira.password)
         c.adapter Faraday.default_adapter
@@ -259,7 +322,22 @@ class Task < ActiveRecord::Base
         request.headers['User-Agent'] = 'Caperoma'
         request.headers['Content-Type'] = 'application/json'
       end
+
+      case response.status
+      when 200, 201, 202, 204, 301, 302, 303, 304, 307
+        puts 'Closed the issue in Jira'
+      when 401, 403
+        puts "No access to the task #{jira_key} in Jira. Maybe login or api_key are incorrect."
+      when 404
+        puts "A task with ID #{jira_key} is not found in Jira."
+      else
+        puts 'Could not close the issue in Jira.'
+        puts "Error status: #{response.status}"
+        puts "Message from server: #{response.reason_phrase}"
+      end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Jira.'
   end
 
   def log_work_to_jira_data(comment = 'Done')
@@ -272,18 +350,35 @@ class Task < ActiveRecord::Base
 
   def log_work_to_jira(comment = 'Done')
     if not_test?
+      puts 'Logging work to Jira'
+
       conn = Faraday.new(url: project.jira_url) do |c|
         c.basic_auth(Account.jira.email, Account.jira.password)
         c.adapter Faraday.default_adapter
       end
 
-      result = conn.post do |request|
+      response = conn.post do |request|
         request.url "rest/api/3/issue/#{jira_key}/worklog"
         request.body = log_work_to_jira_data(comment)
         request.headers['User-Agent'] = 'Caperoma'
         request.headers['Content-Type'] = 'application/json'
       end
+
+      case response.status
+      when 200, 201, 202, 204, 301, 302, 303, 304, 307
+        puts 'Work logged to Jira'
+      when 401, 403
+        puts "No access to the task #{jira_key} in Jira. Maybe login or api_key are incorrect."
+      when 404
+        puts "A task with ID #{jira_key} is not found in Jira."
+      else
+        puts 'Could not log work to Jira.'
+        puts "Error status: #{response.status}"
+        puts "Message from server: #{response.reason_phrase}"
+      end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Jira.'
   end
 
   def current_time
@@ -297,14 +392,17 @@ class Task < ActiveRecord::Base
   def create_issue_on_pivotal_data
     Jbuilder.encode do |j|
       j.current_state 'unstarted'
-      j.estimate 1
+      j.estimate pivotal_estimate == 0 ? 1 : pivotal_estimate
       j.name title.to_s
+      j.description description
       j.story_type story_type
     end
   end
 
   def create_issue_on_pivotal
     if not_test?
+      puts 'Creating a task in Pivotal'
+
       conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
         c.adapter Faraday.default_adapter
       end
@@ -317,29 +415,69 @@ class Task < ActiveRecord::Base
         request.headers['X-TrackerToken'] = Account.pivotal.password
       end
 
-      result = JSON.parse response.body
+      case response.status
+      when 200, 201, 202, 204, 301, 302, 303, 304, 307
+        puts 'Created the task in Pivotal'
+        result = JSON.parse response.body
 
-      update_attributes(
-        pivotal_id: result['id']
-      )
+        update_attributes(
+          pivotal_id: result['id']
+        )
+      when 401, 403
+        puts "No access to the server. Maybe login, api_key or Pivotal Project ID ##{project.pivotal_tracker_project_id} is incorrect."
+      when 404
+        puts "Resource not found. Maybe Pivotal Project ID ##{project.pivotal_tracker_project_id} is incorrect."
+      else
+        puts 'Could not create the task in Pivotal.'
+        puts "Error status: #{response.status}"
+        puts "Message from server: #{response.reason_phrase}"
+      end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Pivotal.'
   end
 
   def create_issue_on_jira_data
-    Jbuilder.encode do |j|
-      j.fields do
-        j.project     { j.id project.jira_project_id.to_s }
-        j.issuetype   { j.id issue_type }
-        j.summary     title.to_s
-        j.assignee do
-          j.name Account.jira.username
-        end
-      end
-    end
+    hash = {
+      fields: {
+        summary: title.to_s,
+        issuetype: {
+          id: issue_type
+        },
+        project: {
+          id: project.jira_project_id.to_s
+        },
+        assignee: {
+          name: Account.jira.username
+        }
+      }
+    }
+
+    description_hash = {
+      type: 'doc',
+      version: 1,
+      content: [
+        {
+          type: 'paragraph',
+          content: [
+            {
+              text: description,
+              type: 'text'
+            }
+          ]
+        }
+      ]
+    }
+
+    hash[:fields][:description] = description_hash if description.present?
+
+    hash.to_json
   end
 
   def create_issue_on_jira
     if not_test?
+      puts 'Creating an issue in Jira'
+
       conn = Faraday.new(url: project.jira_url) do |c|
         c.basic_auth(Account.jira.email, Account.jira.password)
         c.adapter Faraday.default_adapter
@@ -352,17 +490,36 @@ class Task < ActiveRecord::Base
         request.headers['Content-Type'] = 'application/json'
       end
 
-      result = JSON.parse response.body
+      case response.status
+      when 200, 201, 202, 204, 301, 302, 303, 304, 307
+        puts 'Created the issue in Jira'
 
-      update_attributes(
-        jira_id: result['id'],
-        jira_key: result['key'],
-        jira_url: result['self']
-      )
+        result = JSON.parse response.body
+
+        update_attributes(
+          jira_id: result['id'],
+          jira_key: result['key'],
+          jira_url: result['self']
+        )
+      when 401, 403
+        puts "Forbidden access to the resource in Jira. Maybe login, api_key or Jira project id #{project.jira_project_id} are incorrect."
+      when 404
+        puts "Not found the resource in Jira. Maybe the Jira Project ID #{project.jira_project_id} is incorrect."
+      else
+        puts 'Could not create the issue in Jira.'
+        puts "Error status: #{response.status}"
+        puts "Message from server: #{response.reason_phrase}"
+      end
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Jira.'
   end
 
   def not_test?
     ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+  end
+
+  def enable_git?
+    ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
   end
 end

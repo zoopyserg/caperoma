@@ -7,15 +7,18 @@ require 'action_view'
 require 'json'
 require 'jbuilder'
 require 'time_difference'
-require 'pivotal-tracker'
 require 'net/smtp'
 require 'gmail'
 require 'faraday'
 require 'pp'
 
+database_name = "#{ENV['HOME']}/.caperoma.sqlite3"
+database_name = "#{ENV['HOME']}/.caperoma-test.sqlite3" if ENV['CAPEROMA_TEST'].present? || ENV['CAPEROMA_INTEGRATION_TEST'].present?
+database_name = "#{ENV['HOME']}/.caperoma-staging.sqlite3" if ENV['CAPEROMA_STAGING'].present?
+
 DB_SPEC = {
   adapter: 'sqlite3',
-  database: ENV['CAPEROMA_TEST'].present? || ENV['CAPEROMA_INTEGRATION_TEST'].present? ? "#{ENV['HOME']}/.caperoma-test.sqlite3" : "#{ENV['HOME']}/.caperoma.sqlite3"
+  database: database_name
 }.freeze
 
 ActiveRecord::Base.establish_connection(DB_SPEC)
@@ -37,17 +40,12 @@ require 'caperoma/models/tasks/meeting'
 
 require 'caperoma/models/report_recipient'
 
-require 'caperoma/models/branch'
-
 require 'caperoma/models/report'
 require 'caperoma/models/reports/daily_report'
 require 'caperoma/models/reports/three_day_report'
 require 'caperoma/models/reports/retrospective_report'
 
 require 'caperoma/version'
-
-require 'caperoma/services/pivotal_fetcher'
-require 'caperoma/services/airbrake_email_processor'
 
 class Caperoma
   def self.setup
@@ -93,27 +91,21 @@ class Caperoma
       end
       add_index :projects, :jira_project_id
 
-      create_table :branches do |t|
-        t.column :project_id, :integer
-        t.column :name, :string
-
-        t.timestamps
-      end
-      add_index :branches, :project_id
-
       create_table :tasks do |t|
         t.column :project_id, :integer
-        t.column :branch_id, :integer
         t.column :title, :string
         t.column :description, :text
         t.column :url, :text
         t.column :uuid, :string
+        t.column :pivotal_estimate, :integer, default: 0
         t.column :type, :string
         t.column :jira_id, :string
         t.column :jira_key, :string
         t.column :jira_url, :string
         t.column :parent_branch, :string
+        t.column :branch, :string
         t.column :pivotal_id, :string
+        t.column :additional_time, :integer
         t.column :started_at, :datetime
         t.column :finished_at, :datetime
         t.column :daily_report_id, :integer
@@ -123,7 +115,6 @@ class Caperoma
         t.timestamps
       end
       add_index :tasks, :project_id
-      add_index :tasks, :branch_id
       add_index :tasks, :daily_report_id
       add_index :tasks, :three_day_report_id
       add_index :tasks, :retrospective_report_id
@@ -149,9 +140,11 @@ class Caperoma
   end
 
   def self.init
-    if `git -C "#{project.folder_path}" rev-parse --is-inside-work-tree`.strip == 'true'
+    if `git rev-parse --is-inside-work-tree`.strip == 'true'
       template_path = File.join(File.dirname(__FILE__), '..', 'Capefile.template')
-      new_path = `git rev-parse --show-toplevel`.strip + '/Capefile'
+      capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+
+      new_path = `git rev-parse --show-toplevel`.strip + '/' + capefile_filename
 
       FileUtils.cp template_path, new_path
 
@@ -162,47 +155,156 @@ class Caperoma
     end
   end
 
-  # todo: here is project.jira_url. but it has an undefined method project.
+  # TODO: here is project.jira_url. but it has an undefined method project.
   # should move this method to be inside a project (get ids for this project or something).
   def self.get_jira_issue_type_ids
-    conn = Faraday.new(url: project.jira_url) do |c|
-      c.basic_auth(Account.jira.email, Account.jira.password)
-      c.adapter Faraday.default_adapter
+    puts 'Getting issue ids from Jira'
+
+    if Account.jira.present?
+      capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+      if File.exist?(capefile_filename)
+        capedata = YAML.load_file(capefile_filename)
+        if capedata
+          jira_url = capedata['jira_url']
+          if jira_url
+            puts 'Receiving issue types'
+            conn = Faraday.new(url: jira_url) do |c|
+              c.basic_auth(Account.jira.email, Account.jira.password)
+              c.adapter Faraday.default_adapter
+            end
+
+            response = conn.get do |request|
+              request.url 'rest/api/3/issuetype.json'
+              request.headers['User-Agent'] = 'Caperoma'
+              request.headers['Content-Type'] = 'application/json'
+            end
+
+            case response.status
+            when 200, 201, 202, 204, 301, 302, 303, 304, 307
+              puts 'Received these issue types:'
+
+              result = JSON.parse(response.body)
+
+              result.each do |item|
+                puts "Name: #{item['name']}, ID: #{item['id']}"
+              end
+            when 401, 403
+              puts 'No access to Jira. Maybe login or api_key are incorrect.'
+            when 404
+              puts 'Resource not found. Maybe Jira ID is incorrect.'
+            else
+              puts 'Could not get data from Jira.'
+              puts "Error status: #{response.status}"
+              puts "Message from server: #{response.reason_phrase}"
+            end
+          else
+            puts 'Please put at least jira url into your Capefile'
+          end
+        else
+          puts 'Can not parse Capfile. Is it formatted properly?'
+        end
+      else
+        puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
+      end
+    else
+      puts 'Please set up Jira account first'
     end
-
-    response = conn.get do |request|
-      request.url 'rest/api/3/issuetype.json'
-      #request.body = data
-      request.headers['User-Agent'] = 'Caperoma'
-      request.headers['Content-Type'] = 'application/json'
-    end
-
-    puts 'Received these issue types:'
-
-    result = JSON.parse(response.body)
-
-    result.each do |item|
-      puts "ID: #{item['id']}, Name: #{item['name']}"
-    end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed.'
   end
 
   def self.get_jira_transition_ids
-    conn = Faraday.new(url: project.jira_url) do |c|
-      c.basic_auth(Account.jira.email, Account.jira.password)
-      c.adapter Faraday.default_adapter
-    end
+    puts 'Getting transition ids from Jira'
 
-    response = conn.post do |request|
-      request.url 'rest/api/3/issue/{some_issue_key_or_id}/transitions.json'
-      request.body = data
-      request.headers['User-Agent'] = 'Caperoma'
-      request.headers['Content-Type'] = 'application/json'
-    end
+    if Account.jira.present?
+      capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+      if File.exist?(capefile_filename)
+        capedata = YAML.load_file(capefile_filename)
+        if capedata
+          jira_url = capedata['jira_url']
+          if jira_url
+            jira_project_id = capedata['jira_project_id']
 
-    puts 'Received these transition types:'
-    JSON.parse(response).each do |item|
-      puts "ID: #{item.id}, Name: #{item.name}"
+            if jira_project_id
+              puts 'Receiving an issue to get transition ids:'
+
+              conn = Faraday.new(url: jira_url) do |c|
+                c.basic_auth(Account.jira.email, Account.jira.password)
+                c.adapter Faraday.default_adapter
+              end
+
+              response = conn.get do |request|
+                request.url "rest/api/3/search?jql=project=%22#{jira_project_id}%22"
+                request.headers['User-Agent'] = 'Caperoma'
+                request.headers['Content-Type'] = 'application/json'
+              end
+
+              case response.status
+              when 200, 201, 202, 204, 301, 302, 303, 304, 307
+                issues = JSON.parse(response.body)['issues']
+
+                if !issues.empty?
+                  first_issue = issues[0]
+                  first_issue_key = first_issue['key']
+
+                  conn2 = Faraday.new(url: jira_url) do |c|
+                    c.basic_auth(Account.jira.email, Account.jira.password)
+                    c.adapter Faraday.default_adapter
+                  end
+
+                  response2 = conn2.get do |request|
+                    request.url "rest/api/3/issue/#{first_issue_key}/transitions"
+                    request.headers['User-Agent'] = 'Caperoma'
+                    request.headers['Content-Type'] = 'application/json'
+                  end
+
+                  case response2.status
+                  when 200, 201, 202, 204, 301, 302, 303, 304, 307
+                    puts 'Received these transitions:'
+                    transitions = JSON.parse(response2.body)['transitions']
+
+                    transitions.each do |transition|
+                      pp "Name: #{transition['name']}, ID: #{transition['id']}"
+                    end
+                  when 401, 403
+                    puts 'No access to Jira. Maybe login or api_key are incorrect.'
+                  when 404
+                    puts 'Resource not found. Maybe Jira ID is incorrect.'
+                  else
+                    puts 'Could not get data from Jira.'
+                    puts "Error status: #{response2.status}"
+                    puts "Message from server: #{response2.reason_phrase}"
+                  end
+                else
+                  puts 'Please create at least one issue in this project manually in the browser.'
+                end
+              when 401, 403
+                puts 'No access to Jira. Maybe login or api_key are incorrect.'
+              when 404
+                puts 'Resource not found. Maybe Jira ID is incorrect.'
+              else
+                puts 'Could not get data from Jira.'
+                puts "Error status: #{response.status}"
+                puts "Message from server: #{response.reason_phrase}"
+              end
+            else
+              puts 'Please put jira_project_id into your Capefile'
+            end
+
+          else
+            puts 'Please put jira_url into your Capefile'
+          end
+        else
+          puts 'Can not parse Capfile. Is it formatted properly?'
+        end
+      else
+        puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
+      end
+    else
+      puts 'Please set up Jira account first'
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed.'
   end
 
   def self.drop_db
@@ -214,7 +316,7 @@ class Caperoma
 
   def self.create_task(argv)
     # test if Capefile exists
-    capefile_filename = (ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?) ? 'Capefile' : 'Capefile.test'
+    capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
 
     if File.exist?(capefile_filename)
       capedata = nil
@@ -237,7 +339,7 @@ class Caperoma
       create_fixes_in_pivotal_as_chores = nil
       create_meetings_in_pivotal_as_chores = nil
 
-      capedata = YAML.load_file(capefile_filename) 
+      capedata = YAML.load_file(capefile_filename)
       if capedata
         jira_url = capedata['jira_url']
         jira_project_id = capedata['jira_project_id']
@@ -292,43 +394,58 @@ class Caperoma
         additional_time_flag_position = argv.index('-a') || argv.index('--additional_time')
         additional_time = argv[additional_time_flag_position + 1] if additional_time_flag_position
 
+        pivotal_id = pivotal_id.gsub(/#/, '') if pivotal_id.present?
+
+        project = Project.all.select { |project| project.jira_project_id == jira_project_id || project.pivotal_tracker_project_id == pivotal_tracker_project_id || project.folder_path == folder_path || project.github_repo == github_repo }.first
+
+        project ||= Project.new
+
+        project.folder_path = folder_path
+        project.jira_url = jira_url
+        project.jira_project_id = jira_project_id
+        project.github_repo = github_repo
+        project.feature_jira_task_id = feature_jira_task_id
+        project.bug_jira_task_id = bug_jira_task_id
+        project.chore_jira_task_id = chore_jira_task_id
+        project.fix_jira_task_id = fix_jira_task_id
+        project.meeting_jira_task_id = meeting_jira_task_id
+        project.jira_transition_id_todo = jira_transition_id_todo
+        project.jira_transition_id_in_progress = jira_transition_id_in_progress
+        project.jira_transition_id_done = jira_transition_id_done
+        project.pivotal_tracker_project_id = pivotal_tracker_project_id
+        project.create_features_in_pivotal = create_features_in_pivotal
+        project.create_bugs_in_pivotal = create_bugs_in_pivotal
+        project.create_chores_in_pivotal = create_chores_in_pivotal
+        project.create_fixes_in_pivotal_as_chores = create_fixes_in_pivotal_as_chores
+        project.create_meetings_in_pivotal_as_chores = create_meetings_in_pivotal_as_chores
+        project.save
+
+        pivotal_data = get_pivotal_data(pivotal_id)
+        title ||= pivotal_data[:title]
+        description ||= pivotal_data[:description]
+        pivotal_id = pivotal_data[:pivotal_id]
+        pivotal_estimate = pivotal_data[:estimate]
+
         if title
-          project = Project.all.select { |project| project.jira_project_id == jira_project_id || project.pivotal_tracker_project_id == pivotal_tracker_project_id || project.folder_path == folder_path || project.github_repo == github_repo }.first
-
-          project ||= Project.new
-
-          project.folder_path = folder_path
-          project.jira_url = jira_url
-          project.jira_project_id = jira_project_id
-          project.github_repo = github_repo
-          project.feature_jira_task_id = feature_jira_task_id
-          project.bug_jira_task_id = bug_jira_task_id
-          project.chore_jira_task_id = chore_jira_task_id
-          project.fix_jira_task_id = fix_jira_task_id
-          project.meeting_jira_task_id = meeting_jira_task_id
-          project.jira_transition_id_todo = jira_transition_id_todo
-          project.jira_transition_id_in_progress = jira_transition_id_in_progress
-          project.jira_transition_id_done = jira_transition_id_done
-          project.pivotal_tracker_project_id = pivotal_tracker_project_id
-          project.create_features_in_pivotal = create_features_in_pivotal
-          project.create_bugs_in_pivotal = create_bugs_in_pivotal
-          project.create_chores_in_pivotal = create_chores_in_pivotal
-          project.create_fixes_in_pivotal_as_chores = create_fixes_in_pivotal_as_chores
-          project.create_meetings_in_pivotal_as_chores = create_meetings_in_pivotal_as_chores
-          project.save
-
+          record = nil
 
           case argv[0]
           when 'chore'
-            project.chores.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.chores.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
           when 'bug'
-            project.bugs.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.bugs.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
           when 'feature'
-            project.features.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.features.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
           when 'fix'
-            project.fixes.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.fixes.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
           when 'meeting'
-            project.meetings.create(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time)
+            record = project.meetings.new(title: title, description: description, project_id: project_id, pivotal_id: pivotal_id, additional_time: additional_time, pivotal_estimate: pivotal_estimate)
+          end
+
+          if record.valid?
+            record.save
+          else
+            puts record.errors.details.to_s
           end
         else
           puts "Title is required. Add -t \"my #{argv[0]} title\" flag."
@@ -339,26 +456,119 @@ class Caperoma
     else
       puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
     end
+  end
 
+  def self.get_pivotal_data(pivotal_id)
+    resulting_hash = { title: nil, description: nil, pivotal_id: pivotal_id, estimate: 0 }
+
+    if ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+      if pivotal_id.present?
+        if Account.pivotal.present?
+
+          if pivotal_id.match? /\d+/
+            conn = Faraday.new(url: 'https://www.pivotaltracker.com/') do |c|
+              c.adapter Faraday.default_adapter
+            end
+
+            response = conn.get do |request|
+              request.url "services/v5/stories/#{pivotal_id}"
+              request.headers['User-Agent'] = 'Caperoma'
+              request.headers['Content-Type'] = 'application/json'
+              request.headers['X-TrackerToken'] = Account.pivotal.password
+            end
+
+            case response.status
+            when 200, 201, 202, 204, 301, 302, 303, 304, 307
+              result = JSON.parse response.body
+
+              resulting_hash[:title] = result['name']
+              resulting_hash[:description] = result['description']
+              resulting_hash[:estimate] = result['estimate'].to_i
+            when 401, 403
+              puts 'No access Pivotal. Maybe login or api_key are incorrect.'
+            when 404
+              puts 'Resource not found. Maybe Pivotal ID is incorrect.'
+            else
+              puts 'Could not get data from Pivotal.'
+              puts "Error status: #{response.status}"
+              puts "Message from server: #{response.reason_phrase}"
+            end
+
+            resulting_hash
+          else
+            puts 'Pivotal ID needs to be copied from the task in Pivotal (in either 12345678 or #12345678 format).'
+            puts "Pivotal ID you entered was #{pivotal_id}, which does not match the allowed format."
+            puts 'Skipping usage of this ID.'
+            puts 'Proceeding as if Pivotal ID was not set.'
+            puts 'Please start/finish the needed task in Pivotal manually.'
+
+            resulting_hash[:pivotal_id] = nil
+          end
+        else
+          puts 'Please set up Pivotal account.'
+        end
+      end
+    end
+    resulting_hash
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed. Performing the task without requests to Pivotal.'
+    resulting_hash
   end
 
   def self.get_jira_project_ids
     puts 'Getting projects from Jira'
 
-    conn = Faraday.new(url: Caperoma::Capefile::JIRA_URL) do |c|
-      c.basic_auth(Account.jira.email, Account.jira.password)
-      c.adapter Faraday.default_adapter
-    end
+    if Account.jira.present?
 
-    response = conn.get do |request|
-      request.url 'rest/api/3/project.json'
-      request.headers['User-Agent'] = 'Caperoma'
-      request.headers['Content-Type'] = 'application/json'
-    end
+      capefile_filename = ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank? ? 'Capefile' : 'Capefile.test'
+      if File.exist?(capefile_filename)
+        capedata = YAML.load_file(capefile_filename)
+        if capedata
+          jira_url = capedata['jira_url']
+          if jira_url
+            conn = Faraday.new(url: jira_url) do |c|
+              c.basic_auth(Account.jira.email, Account.jira.password)
+              c.adapter Faraday.default_adapter
+            end
 
-    JSON.parse(response.body).each_with_index do |project|
-      pp "Name: #{project['name']}, jira_project_id: #{project['id']}"
+            response = conn.get do |request|
+              request.url 'rest/api/3/project.json'
+              request.headers['User-Agent'] = 'Caperoma'
+              request.headers['Content-Type'] = 'application/json'
+            end
+
+            case response.status
+            when 200, 201, 202, 204, 301, 302, 303, 304, 307
+              puts 'Received these projects'
+
+              result = JSON.parse(response.body)
+
+              result.each do |project|
+                puts "Name: #{project['name']}, jira_project_id: #{project['id']}"
+              end
+            when 401, 403
+              puts 'No access to Jira. Maybe login or api_key are incorrect.'
+            when 404
+              puts 'Resource not found. Maybe Jira ID is incorrect.'
+            else
+              puts 'Could not get data from Jira.'
+              puts "Error status: #{response.status}"
+              puts "Message from server: #{response.reason_phrase}"
+            end
+          else
+            puts 'Please put at least jira url into your Capefile'
+          end
+        else
+          puts 'Can not parse Capfile. Is it formatted properly?'
+        end
+      else
+        puts 'Capefile not found. Are you in the project folder? If yes, run "caperoma init" to create Capefile.'
+      end
+    else
+      puts 'Please set up Jira account first'
     end
+  rescue Faraday::ConnectionFailed
+    puts 'Connection failed.'
   end
 
   def self.manage_recipients(argv)
@@ -403,7 +613,7 @@ class Caperoma
     when /^(remove|delete|--remove|--delete|-d|-r)$/
       Account.where(type: argv[2]).destroy_all
     when nil
-      Account.all.each { |x| puts "#{x.type[2..-1].capitalize}: #{x.email}" }
+      Account.all.each { |x| puts "#{x.type[2..-1].capitalize}: #{x.email} #{x.password} #{x.username}" }
       puts ''
       puts 'to delete run "caperoma accounts remove "--<type>"'
       puts 'to update run "... accounts --add "--<type>" again'
