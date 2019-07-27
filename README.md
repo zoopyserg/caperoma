@@ -199,7 +199,7 @@ caperoma feature --title "your second feature" --pivotal_task_id 12345678
 # Same as before, but also:
 # A Pivotal task was launched with ID #12345678.
 
-touch ./your_first_feature.rb
+touch ./your_second_feature.rb
 
 caperoma finish "I made a new file"
 # Same as before, but also:
@@ -218,7 +218,7 @@ caperoma feature -t "your third feature" -p 12345678 -a 23
 # -a 23 says to add 23 minutes on top of time recorded by the timer.
 # The alternative version of this parameter is: --additional_time 23
 
-touch ./your_first_feature.rb
+touch ./your_third_feature.rb
 
 caperoma finish
 # Time sent to Jira will be 23 minutes more than the timer recorded.
@@ -298,7 +298,9 @@ Type: Feature
 Jira ID: PRJ-24 (https://example.atlassian.net/browse/PRJ-24)
 Pivotal ID: 167396414 (https://www.pivotaltracker.com/story/show/167396414)
 Time spent at the moment: 2h 50m
+Branch with the task: jr-124-some-task
 Pull request will be sent to this branch: master
+Project location: /path/to/the/project
 
 $ caperoma finish
 ...
