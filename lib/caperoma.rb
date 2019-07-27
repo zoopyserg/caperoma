@@ -11,6 +11,7 @@ require 'net/smtp'
 require 'gmail'
 require 'faraday'
 require 'pp'
+require 'aasm'
 
 database_name = "#{ENV['HOME']}/.caperoma.sqlite3"
 database_name = "#{ENV['HOME']}/.caperoma-test.sqlite3" if ENV['CAPEROMA_TEST'].present? || ENV['CAPEROMA_INTEGRATION_TEST'].present?
@@ -96,7 +97,7 @@ class Caperoma
         t.column :title, :string
         t.column :description, :text
         t.column :url, :text
-        t.column :uuid, :string
+        t.column :comment, :string, default: 'Done'
         t.column :pivotal_estimate, :integer, default: 0
         t.column :type, :string
         t.column :jira_id, :string
@@ -111,6 +112,54 @@ class Caperoma
         t.column :daily_report_id, :integer
         t.column :three_day_report_id, :integer
         t.column :retrospective_report_id, :integer
+
+        t.column :aasm_state, :string
+        t.column :state, :string
+        t.column :pivotal_state, :string
+        t.column :jira_state, :string
+        t.column :jira_worklog_state, :string
+        t.column :jira_key_state, :string
+        t.column :start_on_pivotal_status_state, :string
+        t.column :state, :string
+        t.column :jira_state, :string
+        t.column :pivotal_state, :string
+        t.column :jira_worklog_state, :string
+        t.column :jira_key_state, :string
+
+        t.column :start_on_pivotal_status_state, :string
+        t.column :no_access_to_start_issue_on_pivotal_status_state, :string
+        t.column :no_connection_to_start_issue_on_pivotal_status_state, :string
+        t.column :unknown_error_on_starting_issue_on_pivotal_status_state, :string
+
+        t.column :finished_on_pivotal_status_state, :string
+        t.column :no_access_to_finish_on_pivotal_status_state, :string
+        t.column :no_connection_to_finish_on_pivotal_status_state, :string
+        t.column :unknown_error_on_finishing_on_pivotal_status_state, :string
+
+        t.column :started_issue_on_jira_status_state, :string
+        t.column :no_access_to_start_issue_on_jira_status_state, :string
+        t.column :no_connection_to_start_issue_on_jira_status_state, :string
+        t.column :unknown_error_on_starting_issue_on_jira_status_state, :string
+
+        t.column :closed_issue_on_jira_status_state, :string
+        t.column :no_access_to_close_issue_on_jira_status_state, :string
+        t.column :no_connection_to_close_issue_on_jira_status_state, :string
+        t.column :unknown_error_closing_issue_on_jira_status_state, :string
+
+        t.column :loged_work_to_jira_status_state, :string
+        t.column :no_access_to_log_work_to_jira_status_state, :string
+        t.column :no_connection_to_log_work_to_jira_status_state, :string
+        t.column :unknown_error_loging_work_to_jira_status_state, :string
+
+        t.column :created_issue_on_pivotal_status_state, :string
+        t.column :no_access_trying_to_create_issue_on_pivotal_status_state, :string
+        t.column :no_connection_trying_to_create_issue_on_pivotal_status_state, :string
+        t.column :unknown_error_trying_to_create_issue_on_pivotal_status_state, :string
+
+        t.column :created_issue_on_jira_status_state, :string
+        t.column :no_access_to_create_issue_on_jira_status_state, :string
+        t.column :no_connection_trying_to_create_issue_on_jira_status_state, :string
+        t.column :unknown_error_trying_to_create_issue_on_jira_status_state, :string
 
         t.timestamps
       end

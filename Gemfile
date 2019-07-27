@@ -13,6 +13,7 @@ gem 'rubocop'
 gem 'sqlite3'
 gem 'time_difference'
 gem 'whenever', require: false
+gem 'aasm'
 
 group :development do
   gem 'bundler'
@@ -24,4 +25,9 @@ group :development do
   gem 'shoulda'
   gem 'shoulda-matchers'
   gem 'timecop'
+  gem 'byebug'
+end
+
+group :test do
+  gem 'byebug'
 end

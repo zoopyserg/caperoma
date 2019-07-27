@@ -53,6 +53,15 @@ RSpec.describe Task, type: :model do
     end
   end
 
+  describe 'status changes' do
+    let!(:task) { create :task }
+
+    it { 
+      pp task.methods
+      expect(task).to transition_from(:created).to(:started).on_event(:start!).on(:workflow) }
+
+  end
+
   describe 'class_methods' do
     let!(:account) { create :account, type: '--jira' }
     let(:faraday) { double('Faraday', post: response) }
@@ -109,40 +118,40 @@ RSpec.describe Task, type: :model do
       let!(:task) { create :task, finished_at: nil, pivotal_id: '12345678', additional_time: 5 }
       describe '#finish' do
         it 'should finish it and log time' do
-          expect(task).to receive :close_issue_on_jira
-          expect(task).to receive :log_work_to_jira
-          expect(task).to receive :finish_on_pivotal
-          task.finish(nil)
+          expect(task).to receive :close_jira
+          expect(task).to receive :create_jira_worklog
+          expect(task).to receive :finish_pivotal
+          task.finish
           expect(task.finished_at).to be_present
         end
       end
 
       describe '#pause' do
         it 'should pause it and log time' do
-          expect(task).to receive :close_issue_on_jira
-          expect(task).to receive :log_work_to_jira
-          expect(task).to receive :finish_on_pivotal
-          task.pause(nil)
+          expect(task).to receive :close_jira
+          expect(task).to receive :create_jira_worklog
+          expect(task).to receive :finish_pivotal
+          task.pause
           expect(task.finished_at).to be_present
         end
       end
 
       describe '#abort' do
         it 'should abort it and log time' do
-          expect(task).to receive :close_issue_on_jira
-          expect(task).to receive :log_work_to_jira
-          expect(task).to receive :finish_on_pivotal
-          task.abort(nil)
+          expect(task).to receive :close_jira
+          expect(task).to receive :create_jira_worklog
+          expect(task).to receive :finish_pivotal
+          task.abort
           expect(task.finished_at).to be_present
         end
       end
 
       describe '#abort_without_time' do
         it 'should abort it and not log time' do
-          expect(task).to receive :close_issue_on_jira
-          expect(task).not_to receive :log_work_to_jira
-          expect(task).not_to receive :finish_on_pivotal
-          task.abort_without_time(nil)
+          expect(task).to receive :close_jira
+          expect(task).not_to receive :create_jira_worklog
+          expect(task).not_to receive :finish_pivotal
+          task.abort_without_time
           expect(task.finished_at).to be_present
         end
       end
@@ -152,40 +161,40 @@ RSpec.describe Task, type: :model do
       let!(:task) { create :task, finished_at: nil, pivotal_id: nil, additional_time: 5 }
       describe '#finish' do
         it 'should finish it and log time' do
-          expect(task).to receive :close_issue_on_jira
-          expect(task).to receive :log_work_to_jira
-          expect(task).not_to receive :finish_on_pivotal
-          task.finish(nil)
+          expect(task).to receive :close_jira
+          expect(task).to receive :create_jira_worklog
+          expect(task).not_to receive :finish_pivotal
+          task.finish!
           expect(task.finished_at).to be_present
         end
       end
 
       describe '#pause' do
         it 'should pause it and log time' do
-          expect(task).to receive :close_issue_on_jira
-          expect(task).to receive :log_work_to_jira
-          expect(task).not_to receive :finish_on_pivotal
-          task.pause(nil)
+          expect(task).to receive :close_jira
+          expect(task).to receive :create_jira_worklog
+          expect(task).not_to receive :finish_pivotal
+          task.pause!
           expect(task.finished_at).to be_present
         end
       end
 
       describe '#abort' do
         it 'should abort it and log time' do
-          expect(task).to receive :close_issue_on_jira
-          expect(task).to receive :log_work_to_jira
-          expect(task).not_to receive :finish_on_pivotal
-          task.abort(nil)
+          expect(task).to receive :close_jira
+          expect(task).to receive :create_jira_worklog
+          expect(task).not_to receive :finish_pivotal
+          task.abort!
           expect(task.finished_at).to be_present
         end
       end
 
       describe '#abort_without_time' do
         it 'should abort it and not log time' do
-          expect(task).to receive :close_issue_on_jira
-          expect(task).not_to receive :log_work_to_jira
-          expect(task).not_to receive :finish_on_pivotal
-          task.abort_without_time(nil)
+          expect(task).to receive :close_jira
+          expect(task).not_to receive :create_jira_worklog
+          expect(task).not_to receive :finish_pivotal
+          task.abort_without_time!
           expect(task.finished_at).to be_present
         end
       end
@@ -196,16 +205,6 @@ RSpec.describe Task, type: :model do
 
   describe 'observers' do
     let!(:project) { create :project, jira_project_id: 135 }
-    before { expect(SecureRandom).to receive(:uuid).and_return '123' }
-
-    describe '::generate_uuid' do
-      let(:task) { build :task }
-
-      it 'should_generate_random_string' do
-        task.save
-        expect(task.uuid).to eq '123'
-      end
-    end
 
     describe '::set_start_time' do
       let!(:timestamp) { Time.parse('5 April 2014') }
@@ -420,7 +419,7 @@ RSpec.describe Task, type: :model do
       end
     end
 
-    describe '::start_issue_on_jira' do
+    describe '::start_jira' do
       let(:task) { build :task, jira_key: jira_key }
 
       context 'account present, jira id present' do
@@ -428,9 +427,9 @@ RSpec.describe Task, type: :model do
         let!(:jira_key) { 'OK-1' }
 
         it 'should start task in Jira after create' do
-          expect(task).to receive(:start_issue_on_jira)
+          expect(task).to receive(:start_jira)
 
-          task.save
+          task.start
         end
       end
 
@@ -845,17 +844,17 @@ RSpec.describe Task, type: :model do
       end
     end
 
-    describe '::start_issue_on_pivotal' do
-      let(:task) { build :task, pivotal_id: pivotal_id }
+    describe '::start_pivotal' do
+      let(:task) { create :task, pivotal_id: pivotal_id }
 
       context 'pt id present, pt account present' do
         let(:pivotal_id) { '12345678' }
         let!(:account) { create :account, type: '--pivotal' }
 
         it 'should start task in pivotal after create' do
-          expect(task).to receive(:start_issue_on_pivotal)
+          expect(task).to receive(:start_pivotal)
 
-          task.save
+          task.start
         end
       end
 
@@ -1058,7 +1057,7 @@ RSpec.describe Task, type: :model do
       end
     end
 
-    describe '::close_issue_on_jira' do
+    describe '::close_jira' do
       let(:task) { build :task, jira_key: jira_key }
 
       let!(:account) { create :account, type: '--jira' }
@@ -1079,7 +1078,7 @@ RSpec.describe Task, type: :model do
 
         it 'should give the no connection error' do
           expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Jira./
-          task.send(:close_issue_on_jira)
+          task.close_jira
         end
       end
 
@@ -1096,7 +1095,7 @@ RSpec.describe Task, type: :model do
 
           it 'should say it could not start' do
             expect(STDOUT).to receive(:puts).with /No access/
-            task.send(:close_issue_on_jira)
+            task.close_jira
           end
         end
 
@@ -1106,7 +1105,7 @@ RSpec.describe Task, type: :model do
 
           it 'should say it could not start' do
             expect(STDOUT).to receive(:puts).with /No access/
-            task.send(:close_issue_on_jira)
+            task.close_jira
           end
         end
 
@@ -1116,7 +1115,7 @@ RSpec.describe Task, type: :model do
 
           it 'should say it could not start' do
             expect(STDOUT).to receive(:puts).with /not found/
-            task.send(:close_issue_on_jira)
+            task.close_jira
           end
         end
 
@@ -1128,19 +1127,19 @@ RSpec.describe Task, type: :model do
             expect(STDOUT).to receive(:puts).with /Could not/
             expect(STDOUT).to receive(:puts).with /500/
             expect(STDOUT).to receive(:puts).with /server error/
-            task.send(:close_issue_on_jira)
+            task.close_jira
           end
         end
       end
     end
 
     describe '#log_work_to_jira_data' do
-      let!(:task) { create :task }
+      let!(:task) { create :task, comment: 'some comment' }
 
       it 'should format hash' do
         allow(task).to receive(:current_time).and_return 'time'
         allow(task).to receive(:time_spent).and_return 'spent'
-        result = task.send(:log_work_to_jira_data, 'some comment')
+        result = task.send(:log_work_to_jira_data)
 
         JSON.parse(result).tap do |format|
           expect(format['comment']).to eq 'some comment'
@@ -1150,7 +1149,7 @@ RSpec.describe Task, type: :model do
       end
     end
 
-    describe '#log_work_to_jira' do
+    describe '#create_jira_worklog' do
       let(:task) { build :task, jira_key: jira_key }
 
       context 'no internet connection' do
@@ -1169,7 +1168,7 @@ RSpec.describe Task, type: :model do
         it 'should give the no connection error', :unstub_jira_starting do
           task.save
           expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Jira./
-          task.send(:log_work_to_jira)
+          task.create_jira_worklog
         end
       end
 
@@ -1195,7 +1194,7 @@ RSpec.describe Task, type: :model do
           it 'should give the "unauth" error' do
             task.save
             expect(STDOUT).to receive(:puts).with /No access/
-            task.send(:log_work_to_jira)
+            task.create_jira_worklog
           end
         end
 
@@ -1206,7 +1205,7 @@ RSpec.describe Task, type: :model do
           it 'should give the "unauth" error' do
             task.save
             expect(STDOUT).to receive(:puts).with /No access/
-            task.send(:log_work_to_jira)
+            task.create_jira_worklog
           end
         end
 
@@ -1217,7 +1216,7 @@ RSpec.describe Task, type: :model do
           it 'should give the "unauth" error' do
             task.save
             expect(STDOUT).to receive(:puts).with /not found/
-            task.send(:log_work_to_jira)
+            task.create_jira_worklog
           end
         end
 
@@ -1230,7 +1229,7 @@ RSpec.describe Task, type: :model do
             expect(STDOUT).to receive(:puts).with /Could not/
             expect(STDOUT).to receive(:puts).with /500/
             expect(STDOUT).to receive(:puts).with /unknown/
-            task.send(:log_work_to_jira)
+            task.create_jira_worklog
           end
         end
       end
@@ -1283,7 +1282,7 @@ RSpec.describe Task, type: :model do
       end
     end
 
-    describe '#finish_on_pivotal' do
+    describe '#finish_pivotal' do
       let(:task) { build :task, pivotal_id: pivotal_id }
       let(:pivotal_id) { '12345678' }
       let!(:account) { create :account, type: '--pivotal' }
@@ -1303,7 +1302,7 @@ RSpec.describe Task, type: :model do
 
         it 'should give the no connection error', :unstub_pivotal_starting do
           expect(STDOUT).to receive(:puts).with /Connection failed. Performing the task without requests to Pivotal./
-          task.send(:finish_on_pivotal)
+          task.finish_pivotal
         end
       end
 
@@ -1320,7 +1319,7 @@ RSpec.describe Task, type: :model do
 
           it 'should give the no auth error' do
             expect(STDOUT).to receive(:puts).with /No access/
-            task.send(:finish_on_pivotal)
+            task.finish_pivotal
           end
         end
 
@@ -1330,7 +1329,7 @@ RSpec.describe Task, type: :model do
 
           it 'should give the no auth error' do
             expect(STDOUT).to receive(:puts).with /No access/
-            task.send(:finish_on_pivotal)
+            task.finish_pivotal
           end
         end
 
@@ -1340,7 +1339,7 @@ RSpec.describe Task, type: :model do
 
           it 'should give the not found error' do
             expect(STDOUT).to receive(:puts).with /not found/
-            task.send(:finish_on_pivotal)
+            task.finish_pivotal
           end
         end
 
@@ -1352,7 +1351,7 @@ RSpec.describe Task, type: :model do
             expect(STDOUT).to receive(:puts).with /Could not/
             expect(STDOUT).to receive(:puts).with /500/
             expect(STDOUT).to receive(:puts).with /error/
-            task.send(:finish_on_pivotal)
+            task.finish_pivotal
           end
         end
       end
@@ -1389,7 +1388,7 @@ RSpec.describe Task, type: :model do
       it 'should return formatted time difference' do
         expect(task).to receive(:started_at).and_return start_time
         expect(task).to receive(:finished_at).and_return finish_time
-        result = task.send(:time_spent)
+        result = task.time_spent
         expect(result).to eq '1h 15m'
       end
     end

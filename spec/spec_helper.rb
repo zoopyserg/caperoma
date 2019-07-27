@@ -14,6 +14,8 @@ require 'shoulda/matchers'
 require 'factory_girl'
 require 'database_cleaner'
 require 'timecop'
+require 'aasm/rspec'
+require 'byebug'
 
 # Requires supporting files with custom matchers and macros, etc,
 # in ./support/ and its subdirectories.

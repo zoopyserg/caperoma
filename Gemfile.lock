@@ -1,6 +1,8 @@
 GEM
   remote: https://rubygems.org/
   specs:
+    aasm (5.0.5)
+      concurrent-ruby (~> 1.0)
     actionpack (5.2.3)
       actionview (= 5.2.3)
       activesupport (= 5.2.3)
@@ -30,6 +32,7 @@ GEM
     arel (9.0.0)
     ast (2.4.0)
     builder (3.2.3)
+    byebug (11.0.1)
     chronic (0.10.2)
     concurrent-ruby (1.1.5)
     crass (1.0.4)
@@ -152,11 +155,12 @@ PLATFORMS
   ruby
 
 DEPENDENCIES
+  aasm
   actionpack
   actionview
   activerecord
-  activesupport
   bundler
+  byebug
   database_cleaner
   factory_girl
   faraday
@@ -172,9 +176,6 @@ DEPENDENCIES
   time_difference
   timecop
   whenever
-
-RUBY VERSION
-   ruby 2.6.3p62
 
 BUNDLED WITH
    1.17.3
