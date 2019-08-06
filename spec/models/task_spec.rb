@@ -448,7 +448,7 @@ RSpec.describe Task, type: :model do
         # STOPPED HERE
         it { expect{ task.start! }.to output(/Starting a task/).to_stdout }
         it { expect{ task.start! }.to change{ task.state }.from('created').to('started') }
-        it { expect{ task.create_jira! }.to output(/Creating an issue in Jira/).to_stdout }
+        it { expect{ task.start! }.to output(/Creating an issue in Jira/).to_stdout }
         it { expect{ task.start! }.to change{ task.jira_state }.from('pending_jira').to('created_jira') }
 
         it { expect{ task.start! }.to output(/A task is started/).to_stdout }
