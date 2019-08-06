@@ -22,24 +22,24 @@ Juwelier::Tasks.new do |gem|
   gem.summary = %(Automate your workflow with Ruby / Git / Jira / PivotalTracker.)
   gem.description = <<-EOF
     Caperoma automates many decisions related to the programming that you often don't realize, and which you can forget hundreds of times during the time of working on the project:
-    - pulling the latest code from upstream before you start working,
-    - remembering from which branch you started the feature to later make a pull request into it,
-    - creating & starting tasks in Jira,
-    - creating & starting tasks in Pivotal,
-    - naming branches,
-    - adding Jira ID into the branch name,
-    - style guide checks,
-    - commits,
-    - naming commits,
-    - adding Jira ID into commit name,
-    - adding Pivotal ID into commit name,
-    - git pushes,
-    - pull requests into correct branches,
-    - stopping tasks in Jira,
-    - stopping tasks in Pivotal,
-    - tracking time,
-    - logging time to Jira,
-    - switching back into the original branch and much more.
+    pulling the latest code from upstream before you start working,
+    remembering from which branch you started the feature to later make a pull request into it,
+    creating & starting tasks in Jira,
+    creating & starting tasks in Pivotal,
+    naming branches,
+    adding Jira ID into the branch name,
+    style guide checks,
+    commits,
+    naming commits,
+    adding Jira ID into commit name,
+    adding Pivotal ID into commit name,
+    git pushes,
+    pull requests into correct branches,
+    stopping tasks in Jira,
+    stopping tasks in Pivotal,
+    tracking time,
+    logging time to Jira,
+    switching back into the original branch and much more.
   EOF
   gem.files += FileList['lib/**/*', 'bin/*', '[A-Za-z.]*', 'spec/**/*', 'config/*'].to_a
   gem.bindir = 'bin'
@@ -56,10 +56,11 @@ Juwelier::Tasks.new do |gem|
   gem.add_runtime_dependency 'rubocop', '~> 0.73.0'
   gem.add_runtime_dependency 'sqlite3', '~> 1.4.1'
   gem.add_runtime_dependency 'time_difference', '~> 0.7.0'
+  gem.add_runtime_dependency 'whenever', '~> 1.0.0'
 
   gem.add_development_dependency 'bundler'
   gem.add_development_dependency 'database_cleaner', '~> 1.7.0'
-  gem.add_development_dependency 'factory_bot_rails', '~> 5.0.2'
+  gem.add_development_dependency 'factory_girl', '~> 4.9.0'
   gem.add_development_dependency 'rdoc', '~> 6.1.1'
   gem.add_development_dependency 'rspec', '~> 3.8.0'
   gem.add_development_dependency 'shoulda', '~> 2.11.3'

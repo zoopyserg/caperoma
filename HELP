@@ -13,7 +13,7 @@ Available commands
 
 ### Get Issue IDs from Jira 
 `caperoma get_jira_issue_type_ids` - see what issue IDs does your Jira support, to put them into the Capefile.
-#
+
 ### Get Transition IDs from Jira 
 `caperoma get_jira_transition_ids` - see what transition IDs does your Jira support, to put them into the Capefile.
 
@@ -36,6 +36,7 @@ $ caperoma status
 You are not working on anything now.
 ```
 
+### Projects List
 `caperoma projects` - shows the list of projects on this computer.
 Example:
 ```bash
@@ -58,7 +59,7 @@ $ caperoma projects
 - *If the -p parameter is specified, Caperoma starts Pivotal task with this ID.*
 - *If the -p parameter is not specified, Caperoma will create a new task in Pivotal, start it and use its ID.*
 - *The creation of certain types of tasks in Pivotal (when -p is absent) can be turned on or off in Capefile.*
-- *If you are already working on something, you won't be able to start a new task. First you will have to finish or pause the current task.*
+- *If you are already working on something, you won't be able to start a new task. First, you will have to finish or pause the current task.*
 
 `options`:
 
@@ -90,6 +91,9 @@ caperoma feature -t "title" -d "description" -p 4830184 -a 48
 
 caperoma feature --title "title" --description "description" --pivotal_task_id 1000001 --additional_time 5
 # (create the feature "title" with the description of "description" and Pivotal ID #1000001, on which you started working 5 minutes ago)
+
+caperoma feature -p 12345678
+# (it will take title and description from Pivotal task with id 12345678)
 ```
 
 #### Start a Bug 
@@ -205,6 +209,7 @@ caperoma abort "can't reproduce"
 # interrupt + write a comment "can't reproduce" in Jira
 
 caperoma abort
+# keep comment blank
 ```
 
 #### Abort current task without logging time
@@ -312,6 +317,12 @@ caperoma accounts -delete --gmail # Remove Gmail account for reports
 
 Keeps the folders of your projects intact.
 
+
+### Deleting all tasks from this computer
+`caperoma delete_tasks` - removes the tasks from the database, so deletes the information on the task names, time spent, branch names, etc.
+
+Keeps other settings (accounts, projects) and the folders of your projects intact.
+
 ### Version:
 `caperoma -v` - shows Caperoma version
 
@@ -355,17 +366,15 @@ caperoma recipients --delete "your_supervisor@domain.com"
 `caperoma report auto off` - turn off automatic report sending to all your recipients.
 
 ### Sending Reports Manually
-`caperoma report daily` - send a daily report right now
+`caperoma report [option]` - send a report right now.
 
-`caperoma report -d` - send a daily report right now
+`[option]`:
 
-`caperoma report three_day` - send a three-day report right now
+`daily`, `-d` - send a daily report right now
 
-`caperoma report -t` - send a three-day report right now
+`three_day`, `-t` - send a three-day report right now
 
-`caperoma report weekly` - send a weekly report right now
-
-`caperoma report -w` - send a weekly report right now
+`weekly`, `-w` - send a weekly report right now
 
 ### Support me on Patreon.
 https://www.patreon.com/sergevinogradoff

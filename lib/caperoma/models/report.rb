@@ -11,18 +11,18 @@ class Report < ApplicationRecord
   after_create :update_content
 
   def self.schedule
-    # may screw up existing cron tasks
     puts 'Turning on auto reports'
     root = File.dirname __dir__
-    crontab_file = File.join root, 'config', 'crontab'
-    `crontab #{crontab_file}`
-    # > whenever --update-crontab caperoma
+    crontab_config_file = File.join root, '..', '..', 'config', 'schedule.rb'
+    `whenever --update-crontab caperoma --load-file "#{crontab_config_file}"`
     puts 'Auto reports turned on'
   end
 
   def self.unschedule
     puts 'Turning off auto reports'
-    puts 'pending'
+    root = File.dirname __dir__
+    crontab_config_file = File.join root, '..', '..', 'config', 'unschedule.rb'
+    `whenever --update-crontab caperoma --load-file "#{crontab_config_file}"`
     puts 'Auto reports turned off'
   end
 
