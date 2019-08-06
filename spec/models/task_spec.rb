@@ -54,9 +54,324 @@ RSpec.describe Task, type: :model do
   end
 
   describe 'status changes' do
-    let!(:task) { create :task }
+    let!(:account_jira) { create :account, type: '--jira' }
+    let!(:account_pivotal) { create :account, type: '--pivotal' }
+    let(:task) { create :task, jira_key: 'PO-2', pivotal_id: pivotal_id }
 
-    it { expect(task).to transition_from(:created).to(:started).on_event(:start!).on(:workflow) }
+    let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: status, reason_phrase: reason_phrase) }
+    let(:faraday) { double('Faraday', post: response) }
+    let(:status) { 200 }
+    let(:reason_phrase) { 'OK' }
+    let(:pivotal_id) { '12345678' }
+
+    before do
+      allow(Faraday).to receive(:new).and_return faraday
+      allow(Faraday).to receive(:default_adapter)
+      allow(faraday).to receive(:post).and_return response
+      allow(faraday).to receive(:get).and_return response
+      allow(faraday).to receive(:put).and_return response
+    end
+
+    describe 'workflow' do
+      it { expect(task).to transition_from(:created).to(:started).on_event(:start!) }
+      it { expect(task).to transition_from(:started).to(:finished).on_event(:finish!) }
+      it { expect(task).to transition_from(:started).to(:aborted).on_event(:abort!) }
+      it { expect(task).to transition_from(:started).to(:aborted_without_time).on_event(:abort_without_time!) }
+      it { expect(task).to transition_from(:started).to(:paused).on_event(:pause!) }
+    end
+
+    describe 'jira workflow' do
+      it { expect(task).to transition_from(:pending_jira).to(:created_jira).on_event(:create_jira).on(:jira) }
+      it { expect(task).to transition_from(:created_jira).to(:started_jira).on_event(:start_jira).on(:jira) }
+      it { expect(task).to transition_from(:started_jira).to(:closed_jira).on_event(:close_jira!).on(:jira) }
+    end
+
+    describe 'pivotal workflow' do
+      context 'creating' do
+        let(:pivotal_id) { nil }
+
+        before { allow(task).to receive(:this_is_a_type_a_user_wants_to_create?).and_return true }
+
+        it { expect(task).to transition_from(:pending_pivotal).to(:created_pivotal).on_event(:create_pivotal).on(:pivotal) }
+      end
+
+      it { expect(task).to transition_from(:created_pivotal).to(:started_pivotal).on_event(:start_pivotal).on(:pivotal) }
+      it { expect(task).to transition_from(:started_pivotal).to(:finished_pivotal).on_event(:finish_pivotal!).on(:pivotal) }
+    end
+
+    describe 'jira key' do
+      it { expect(task).to transition_from(:hidden_jira_key).to(:shown_jira_key).on_event(:show_jira_key).on(:jira_key) }
+    end
+
+    describe 'jira work log' do
+      it { expect(task).to transition_from(:pending_jira_worklog).to(:created_jira_worklog).on_event(:create_jira_worklog).on(:jira_worklog) }
+    end
+
+    describe 'start_on_pivotal_status' do
+      context 'ok' do
+        let(:status) { 200 }
+
+        it { expect(task).to transition_from(:hidden_start_on_pivotal_status).to(:shown_start_on_pivotal_status).on_event(:show_start_on_pivotal_status).on(:start_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_start_issue_on_pivotal_status).to(:shown_no_access_to_start_issue_on_pivotal_status).on_event(:show_no_access_to_start_issue_on_pivotal_status).on(:no_access_to_start_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_start_issue_on_pivotal_status).to(:shown_no_connection_to_start_issue_on_pivotal_status).on_event(:show_no_connection_to_start_issue_on_pivotal_status).on(:no_connection_to_start_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_on_starting_issue_on_pivotal_status).to(:shown_unknown_error_on_starting_issue_on_pivotal_status).on_event(:show_unknown_error_on_starting_issue_on_pivotal_status).on(:unknown_error_on_starting_issue_on_pivotal_status) }
+      end
+
+      context 'forbidden' do
+        let(:status) { 401 }
+
+        it { expect(task).not_to transition_from(:hidden_start_on_pivotal_status).to(:shown_start_on_pivotal_status).on_event(:show_start_on_pivotal_status).on(:start_on_pivotal_status) }
+        it { expect(task).to transition_from(:hidden_no_access_to_start_issue_on_pivotal_status).to(:shown_no_access_to_start_issue_on_pivotal_status).on_event(:show_no_access_to_start_issue_on_pivotal_status).on(:no_access_to_start_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_start_issue_on_pivotal_status).to(:shown_no_connection_to_start_issue_on_pivotal_status).on_event(:show_no_connection_to_start_issue_on_pivotal_status).on(:no_connection_to_start_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_on_starting_issue_on_pivotal_status).to(:shown_unknown_error_on_starting_issue_on_pivotal_status).on_event(:show_unknown_error_on_starting_issue_on_pivotal_status).on(:unknown_error_on_starting_issue_on_pivotal_status) }
+      end
+
+      context 'no access' do
+        let(:status) { 404 }
+
+        it { expect(task).not_to transition_from(:hidden_start_on_pivotal_status).to(:shown_start_on_pivotal_status).on_event(:show_start_on_pivotal_status).on(:start_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_start_issue_on_pivotal_status).to(:shown_no_access_to_start_issue_on_pivotal_status).on_event(:show_no_access_to_start_issue_on_pivotal_status).on(:no_access_to_start_issue_on_pivotal_status) }
+        it { expect(task).to transition_from(:hidden_no_connection_to_start_issue_on_pivotal_status).to(:shown_no_connection_to_start_issue_on_pivotal_status).on_event(:show_no_connection_to_start_issue_on_pivotal_status).on(:no_connection_to_start_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_on_starting_issue_on_pivotal_status).to(:shown_unknown_error_on_starting_issue_on_pivotal_status).on_event(:show_unknown_error_on_starting_issue_on_pivotal_status).on(:unknown_error_on_starting_issue_on_pivotal_status) }
+      end
+
+      context 'unknown error' do
+        let(:status) { 500 }
+
+        it { expect(task).not_to transition_from(:hidden_start_on_pivotal_status).to(:shown_start_on_pivotal_status).on_event(:show_start_on_pivotal_status).on(:start_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_start_issue_on_pivotal_status).to(:shown_no_access_to_start_issue_on_pivotal_status).on_event(:show_no_access_to_start_issue_on_pivotal_status).on(:no_access_to_start_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_start_issue_on_pivotal_status).to(:shown_no_connection_to_start_issue_on_pivotal_status).on_event(:show_no_connection_to_start_issue_on_pivotal_status).on(:no_connection_to_start_issue_on_pivotal_status) }
+        it { expect(task).to transition_from(:hidden_unknown_error_on_starting_issue_on_pivotal_status).to(:shown_unknown_error_on_starting_issue_on_pivotal_status).on_event(:show_unknown_error_on_starting_issue_on_pivotal_status).on(:unknown_error_on_starting_issue_on_pivotal_status) }
+      end
+    end
+
+    describe 'finished_on_pivotal_status' do
+      context 'ok' do
+        let(:status) { 200 }
+
+        it { expect(task).to transition_from(:hidden_finished_on_pivotal_status).to(:shown_finished_on_pivotal_status).on_event(:show_finished_on_pivotal_status).on(:finished_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_finish_on_pivotal_status).to(:shown_no_access_to_finish_on_pivotal_status).on_event(:show_no_access_to_finish_on_pivotal_status).on(:no_access_to_finish_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_finish_on_pivotal_status).to(:shown_no_connection_to_finish_on_pivotal_status).on_event(:show_no_connection_to_finish_on_pivotal_status).on(:no_connection_to_finish_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_on_finishing_on_pivotal_status).to(:shown_unknown_error_on_finishing_on_pivotal_status).on_event(:show_unknown_error_on_finishing_on_pivotal_status).on(:unknown_error_on_finishing_on_pivotal_status) }
+      end
+
+      context 'forbidden' do
+        let(:status) { 401 }
+
+        it { expect(task).not_to transition_from(:hidden_finished_on_pivotal_status).to(:shown_finished_on_pivotal_status).on_event(:show_finished_on_pivotal_status).on(:finished_on_pivotal_status) }
+        it { expect(task).to transition_from(:hidden_no_access_to_finish_on_pivotal_status).to(:shown_no_access_to_finish_on_pivotal_status).on_event(:show_no_access_to_finish_on_pivotal_status).on(:no_access_to_finish_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_finish_on_pivotal_status).to(:shown_no_connection_to_finish_on_pivotal_status).on_event(:show_no_connection_to_finish_on_pivotal_status).on(:no_connection_to_finish_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_on_finishing_on_pivotal_status).to(:shown_unknown_error_on_finishing_on_pivotal_status).on_event(:show_unknown_error_on_finishing_on_pivotal_status).on(:unknown_error_on_finishing_on_pivotal_status) }
+      end
+
+      context 'no access' do
+        let(:status) { 404 }
+
+        it { expect(task).not_to transition_from(:hidden_finished_on_pivotal_status).to(:shown_finished_on_pivotal_status).on_event(:show_finished_on_pivotal_status).on(:finished_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_finish_on_pivotal_status).to(:shown_no_access_to_finish_on_pivotal_status).on_event(:show_no_access_to_finish_on_pivotal_status).on(:no_access_to_finish_on_pivotal_status) }
+        it { expect(task).to transition_from(:hidden_no_connection_to_finish_on_pivotal_status).to(:shown_no_connection_to_finish_on_pivotal_status).on_event(:show_no_connection_to_finish_on_pivotal_status).on(:no_connection_to_finish_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_on_finishing_on_pivotal_status).to(:shown_unknown_error_on_finishing_on_pivotal_status).on_event(:show_unknown_error_on_finishing_on_pivotal_status).on(:unknown_error_on_finishing_on_pivotal_status) }
+      end
+
+      context 'unknown error' do
+        let(:status) { 500 }
+
+        it { expect(task).not_to transition_from(:hidden_finished_on_pivotal_status).to(:shown_finished_on_pivotal_status).on_event(:show_finished_on_pivotal_status).on(:finished_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_finish_on_pivotal_status).to(:shown_no_access_to_finish_on_pivotal_status).on_event(:show_no_access_to_finish_on_pivotal_status).on(:no_access_to_finish_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_finish_on_pivotal_status).to(:shown_no_connection_to_finish_on_pivotal_status).on_event(:show_no_connection_to_finish_on_pivotal_status).on(:no_connection_to_finish_on_pivotal_status) }
+        it { expect(task).to transition_from(:hidden_unknown_error_on_finishing_on_pivotal_status).to(:shown_unknown_error_on_finishing_on_pivotal_status).on_event(:show_unknown_error_on_finishing_on_pivotal_status).on(:unknown_error_on_finishing_on_pivotal_status) }
+      end
+    end
+
+    describe 'started_issue_on_jira_status' do
+      context 'ok' do
+        let(:status) { 200 }
+
+        it { expect(task).to transition_from(:hidden_started_issue_on_jira_status).to(:shown_started_issue_on_jira_status).on_event(:show_started_issue_on_jira_status).on(:started_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_start_issue_on_jira_status).to(:shown_no_access_to_start_issue_on_jira_status).on_event(:show_no_access_to_start_issue_on_jira_status).on(:no_access_to_start_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_start_issue_on_jira_status).to(:shown_no_connection_to_start_issue_on_jira_status).on_event(:show_no_connection_to_start_issue_on_jira_status).on(:no_connection_to_start_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_on_starting_issue_on_jira_status).to(:shown_unknown_error_on_starting_issue_on_jira_status).on_event(:show_unknown_error_on_starting_issue_on_jira_status).on(:unknown_error_on_starting_issue_on_jira_status) }
+      end
+
+      context 'forbidden' do
+        let(:status) { 401 }
+
+        it { expect(task).not_to transition_from(:hidden_started_issue_on_jira_status).to(:shown_started_issue_on_jira_status).on_event(:show_started_issue_on_jira_status).on(:started_issue_on_jira_status) }
+        it { expect(task).to transition_from(:hidden_no_access_to_start_issue_on_jira_status).to(:shown_no_access_to_start_issue_on_jira_status).on_event(:show_no_access_to_start_issue_on_jira_status).on(:no_access_to_start_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_start_issue_on_jira_status).to(:shown_no_connection_to_start_issue_on_jira_status).on_event(:show_no_connection_to_start_issue_on_jira_status).on(:no_connection_to_start_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_on_starting_issue_on_jira_status).to(:shown_unknown_error_on_starting_issue_on_jira_status).on_event(:show_unknown_error_on_starting_issue_on_jira_status).on(:unknown_error_on_starting_issue_on_jira_status) }
+      end
+
+      context 'no access' do
+        let(:status) { 404 }
+
+        it { expect(task).not_to transition_from(:hidden_started_issue_on_jira_status).to(:shown_started_issue_on_jira_status).on_event(:show_started_issue_on_jira_status).on(:started_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_start_issue_on_jira_status).to(:shown_no_access_to_start_issue_on_jira_status).on_event(:show_no_access_to_start_issue_on_jira_status).on(:no_access_to_start_issue_on_jira_status) }
+        it { expect(task).to transition_from(:hidden_no_connection_to_start_issue_on_jira_status).to(:shown_no_connection_to_start_issue_on_jira_status).on_event(:show_no_connection_to_start_issue_on_jira_status).on(:no_connection_to_start_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_on_starting_issue_on_jira_status).to(:shown_unknown_error_on_starting_issue_on_jira_status).on_event(:show_unknown_error_on_starting_issue_on_jira_status).on(:unknown_error_on_starting_issue_on_jira_status) }
+      end
+
+      context 'unknown error' do
+        let(:status) { 500 }
+
+        it { expect(task).not_to transition_from(:hidden_started_issue_on_jira_status).to(:shown_started_issue_on_jira_status).on_event(:show_started_issue_on_jira_status).on(:started_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_start_issue_on_jira_status).to(:shown_no_access_to_start_issue_on_jira_status).on_event(:show_no_access_to_start_issue_on_jira_status).on(:no_access_to_start_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_start_issue_on_jira_status).to(:shown_no_connection_to_start_issue_on_jira_status).on_event(:show_no_connection_to_start_issue_on_jira_status).on(:no_connection_to_start_issue_on_jira_status) }
+        it { expect(task).to transition_from(:hidden_unknown_error_on_starting_issue_on_jira_status).to(:shown_unknown_error_on_starting_issue_on_jira_status).on_event(:show_unknown_error_on_starting_issue_on_jira_status).on(:unknown_error_on_starting_issue_on_jira_status) }
+      end
+    end
+
+    describe 'closed_issue_on_jira_status' do
+      context 'ok' do
+        let(:status) { 200 }
+
+        it { expect(task).to transition_from(:hidden_closed_issue_on_jira_status).to(:shown_closed_issue_on_jira_status).on_event(:show_closed_issue_on_jira_status).on(:closed_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_close_issue_on_jira_status).to(:shown_no_access_to_close_issue_on_jira_status).on_event(:show_no_access_to_close_issue_on_jira_status).on(:no_access_to_close_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_close_issue_on_jira_status).to(:shown_no_connection_to_close_issue_on_jira_status).on_event(:show_no_connection_to_close_issue_on_jira_status).on(:no_connection_to_close_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_closing_issue_on_jira_status).to(:shown_unknown_error_closing_issue_on_jira_status).on_event(:show_unknown_error_closing_issue_on_jira_status).on(:unknown_error_closing_issue_on_jira_status) }
+      end
+
+      context 'forbidden' do
+        let(:status) { 401 }
+
+        it { expect(task).not_to transition_from(:hidden_closed_issue_on_jira_status).to(:shown_closed_issue_on_jira_status).on_event(:show_closed_issue_on_jira_status).on(:closed_issue_on_jira_status) }
+        it { expect(task).to transition_from(:hidden_no_access_to_close_issue_on_jira_status).to(:shown_no_access_to_close_issue_on_jira_status).on_event(:show_no_access_to_close_issue_on_jira_status).on(:no_access_to_close_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_close_issue_on_jira_status).to(:shown_no_connection_to_close_issue_on_jira_status).on_event(:show_no_connection_to_close_issue_on_jira_status).on(:no_connection_to_close_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_closing_issue_on_jira_status).to(:shown_unknown_error_closing_issue_on_jira_status).on_event(:show_unknown_error_closing_issue_on_jira_status).on(:unknown_error_closing_issue_on_jira_status) }
+      end
+
+      context 'no access' do
+        let(:status) { 404 }
+
+        it { expect(task).not_to transition_from(:hidden_closed_issue_on_jira_status).to(:shown_closed_issue_on_jira_status).on_event(:show_closed_issue_on_jira_status).on(:closed_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_close_issue_on_jira_status).to(:shown_no_access_to_close_issue_on_jira_status).on_event(:show_no_access_to_close_issue_on_jira_status).on(:no_access_to_close_issue_on_jira_status) }
+        it { expect(task).to transition_from(:hidden_no_connection_to_close_issue_on_jira_status).to(:shown_no_connection_to_close_issue_on_jira_status).on_event(:show_no_connection_to_close_issue_on_jira_status).on(:no_connection_to_close_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_closing_issue_on_jira_status).to(:shown_unknown_error_closing_issue_on_jira_status).on_event(:show_unknown_error_closing_issue_on_jira_status).on(:unknown_error_closing_issue_on_jira_status) }
+      end
+
+      context 'unknown error' do
+        let(:status) { 500 }
+
+        it { expect(task).not_to transition_from(:hidden_closed_issue_on_jira_status).to(:shown_closed_issue_on_jira_status).on_event(:show_closed_issue_on_jira_status).on(:closed_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_close_issue_on_jira_status).to(:shown_no_access_to_close_issue_on_jira_status).on_event(:show_no_access_to_close_issue_on_jira_status).on(:no_access_to_close_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_close_issue_on_jira_status).to(:shown_no_connection_to_close_issue_on_jira_status).on_event(:show_no_connection_to_close_issue_on_jira_status).on(:no_connection_to_close_issue_on_jira_status) }
+        it { expect(task).to transition_from(:hidden_unknown_error_closing_issue_on_jira_status).to(:shown_unknown_error_closing_issue_on_jira_status).on_event(:show_unknown_error_closing_issue_on_jira_status).on(:unknown_error_closing_issue_on_jira_status) }
+      end
+    end
+
+    describe 'loged_work_to_jira_status' do
+      context 'ok' do
+        let(:status) { 200 }
+
+        it { expect(task).to transition_from(:hidden_loged_work_to_jira_status).to(:shown_loged_work_to_jira_status).on_event(:show_loged_work_to_jira_status).on(:loged_work_to_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_log_work_to_jira_status).to(:shown_no_access_to_log_work_to_jira_status).on_event(:show_no_access_to_log_work_to_jira_status).on(:no_access_to_log_work_to_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_log_work_to_jira_status).to(:shown_no_connection_to_log_work_to_jira_status).on_event(:show_no_connection_to_log_work_to_jira_status).on(:no_connection_to_log_work_to_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_loging_work_to_jira_status).to(:shown_unknown_error_loging_work_to_jira_status).on_event(:show_unknown_error_loging_work_to_jira_status).on(:unknown_error_loging_work_to_jira_status) }
+      end
+
+      context 'forbidden' do
+        let(:status) { 401 }
+
+        it { expect(task).not_to transition_from(:hidden_loged_work_to_jira_status).to(:shown_loged_work_to_jira_status).on_event(:show_loged_work_to_jira_status).on(:loged_work_to_jira_status) }
+        it { expect(task).to transition_from(:hidden_no_access_to_log_work_to_jira_status).to(:shown_no_access_to_log_work_to_jira_status).on_event(:show_no_access_to_log_work_to_jira_status).on(:no_access_to_log_work_to_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_log_work_to_jira_status).to(:shown_no_connection_to_log_work_to_jira_status).on_event(:show_no_connection_to_log_work_to_jira_status).on(:no_connection_to_log_work_to_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_loging_work_to_jira_status).to(:shown_unknown_error_loging_work_to_jira_status).on_event(:show_unknown_error_loging_work_to_jira_status).on(:unknown_error_loging_work_to_jira_status) }
+      end
+
+      context 'no access' do
+        let(:status) { 404 }
+
+        it { expect(task).not_to transition_from(:hidden_loged_work_to_jira_status).to(:shown_loged_work_to_jira_status).on_event(:show_loged_work_to_jira_status).on(:loged_work_to_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_log_work_to_jira_status).to(:shown_no_access_to_log_work_to_jira_status).on_event(:show_no_access_to_log_work_to_jira_status).on(:no_access_to_log_work_to_jira_status) }
+        it { expect(task).to transition_from(:hidden_no_connection_to_log_work_to_jira_status).to(:shown_no_connection_to_log_work_to_jira_status).on_event(:show_no_connection_to_log_work_to_jira_status).on(:no_connection_to_log_work_to_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_loging_work_to_jira_status).to(:shown_unknown_error_loging_work_to_jira_status).on_event(:show_unknown_error_loging_work_to_jira_status).on(:unknown_error_loging_work_to_jira_status) }
+      end
+
+      context 'unknown error' do
+        let(:status) { 500 }
+
+        it { expect(task).not_to transition_from(:hidden_loged_work_to_jira_status).to(:shown_loged_work_to_jira_status).on_event(:show_loged_work_to_jira_status).on(:loged_work_to_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_log_work_to_jira_status).to(:shown_no_access_to_log_work_to_jira_status).on_event(:show_no_access_to_log_work_to_jira_status).on(:no_access_to_log_work_to_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_to_log_work_to_jira_status).to(:shown_no_connection_to_log_work_to_jira_status).on_event(:show_no_connection_to_log_work_to_jira_status).on(:no_connection_to_log_work_to_jira_status) }
+        it { expect(task).to transition_from(:hidden_unknown_error_loging_work_to_jira_status).to(:shown_unknown_error_loging_work_to_jira_status).on_event(:show_unknown_error_loging_work_to_jira_status).on(:unknown_error_loging_work_to_jira_status) }
+      end
+    end
+
+    describe 'created_issue_on_pivotal_status' do
+      context 'ok' do
+        let(:status) { 200 }
+
+        it { expect(task).to transition_from(:hidden_created_issue_on_pivotal_status).to(:shown_created_issue_on_pivotal_status).on_event(:show_created_issue_on_pivotal_status).on(:created_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_trying_to_create_issue_on_pivotal_status).to(:shown_no_access_trying_to_create_issue_on_pivotal_status).on_event(:show_no_access_trying_to_create_issue_on_pivotal_status).on(:no_access_trying_to_create_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_trying_to_create_issue_on_pivotal_status).to(:shown_no_connection_trying_to_create_issue_on_pivotal_status).on_event(:show_no_connection_trying_to_create_issue_on_pivotal_status).on(:no_connection_trying_to_create_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_trying_to_create_issue_on_pivotal_status).to(:shown_unknown_error_trying_to_create_issue_on_pivotal_status).on_event(:show_unknown_error_trying_to_create_issue_on_pivotal_status).on(:unknown_error_trying_to_create_issue_on_pivotal_status) }
+      end
+
+      context 'forbidden' do
+        let(:status) { 401 }
+
+        it { expect(task).not_to transition_from(:hidden_created_issue_on_pivotal_status).to(:shown_created_issue_on_pivotal_status).on_event(:show_created_issue_on_pivotal_status).on(:created_issue_on_pivotal_status) }
+        it { expect(task).to transition_from(:hidden_no_access_trying_to_create_issue_on_pivotal_status).to(:shown_no_access_trying_to_create_issue_on_pivotal_status).on_event(:show_no_access_trying_to_create_issue_on_pivotal_status).on(:no_access_trying_to_create_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_trying_to_create_issue_on_pivotal_status).to(:shown_no_connection_trying_to_create_issue_on_pivotal_status).on_event(:show_no_connection_trying_to_create_issue_on_pivotal_status).on(:no_connection_trying_to_create_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_trying_to_create_issue_on_pivotal_status).to(:shown_unknown_error_trying_to_create_issue_on_pivotal_status).on_event(:show_unknown_error_trying_to_create_issue_on_pivotal_status).on(:unknown_error_trying_to_create_issue_on_pivotal_status) }
+      end
+
+      context 'no access' do
+        let(:status) { 404 }
+
+        it { expect(task).not_to transition_from(:hidden_created_issue_on_pivotal_status).to(:shown_created_issue_on_pivotal_status).on_event(:show_created_issue_on_pivotal_status).on(:created_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_trying_to_create_issue_on_pivotal_status).to(:shown_no_access_trying_to_create_issue_on_pivotal_status).on_event(:show_no_access_trying_to_create_issue_on_pivotal_status).on(:no_access_trying_to_create_issue_on_pivotal_status) }
+        it { expect(task).to transition_from(:hidden_no_connection_trying_to_create_issue_on_pivotal_status).to(:shown_no_connection_trying_to_create_issue_on_pivotal_status).on_event(:show_no_connection_trying_to_create_issue_on_pivotal_status).on(:no_connection_trying_to_create_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_trying_to_create_issue_on_pivotal_status).to(:shown_unknown_error_trying_to_create_issue_on_pivotal_status).on_event(:show_unknown_error_trying_to_create_issue_on_pivotal_status).on(:unknown_error_trying_to_create_issue_on_pivotal_status) }
+      end
+
+      context 'unknown error' do
+        let(:status) { 500 }
+
+        it { expect(task).not_to transition_from(:hidden_created_issue_on_pivotal_status).to(:shown_created_issue_on_pivotal_status).on_event(:show_created_issue_on_pivotal_status).on(:created_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_trying_to_create_issue_on_pivotal_status).to(:shown_no_access_trying_to_create_issue_on_pivotal_status).on_event(:show_no_access_trying_to_create_issue_on_pivotal_status).on(:no_access_trying_to_create_issue_on_pivotal_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_trying_to_create_issue_on_pivotal_status).to(:shown_no_connection_trying_to_create_issue_on_pivotal_status).on_event(:show_no_connection_trying_to_create_issue_on_pivotal_status).on(:no_connection_trying_to_create_issue_on_pivotal_status) }
+        it { expect(task).to transition_from(:hidden_unknown_error_trying_to_create_issue_on_pivotal_status).to(:shown_unknown_error_trying_to_create_issue_on_pivotal_status).on_event(:show_unknown_error_trying_to_create_issue_on_pivotal_status).on(:unknown_error_trying_to_create_issue_on_pivotal_status) }
+      end
+    end
+
+    describe 'creating issue on jira' do
+      context 'ok' do
+        let(:status) { 200 }
+
+        it { expect(task).to transition_from(:hidden_created_issue_on_jira_status).to(:shown_created_issue_on_jira_status).on_event(:show_created_issue_on_jira_status).on(:created_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_create_issue_on_jira_status).to(:shown_no_access_to_create_issue_on_jira_status).on_event(:show_no_access_to_create_issue_on_jira_status).on(:no_access_to_create_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_trying_to_create_issue_on_jira_status).to(:shown_no_connection_trying_to_create_issue_on_jira_status).on_event(:show_no_connection_trying_to_create_issue_on_jira_status).on(:no_connection_trying_to_create_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_trying_to_create_issue_on_jira_status).to(:shown_unknown_error_trying_to_create_issue_on_jira_status).on_event(:show_unknown_error_trying_to_create_issue_on_jira_status).on(:unknown_error_trying_to_create_issue_on_jira_status) }
+      end
+
+      context 'forbidden' do
+        let(:status) { 401 }
+
+        it { expect(task).not_to transition_from(:hidden_created_issue_on_jira_status).to(:shown_created_issue_on_jira_status).on_event(:show_created_issue_on_jira_status).on(:created_issue_on_jira_status) }
+        it { expect(task).to transition_from(:hidden_no_access_to_create_issue_on_jira_status).to(:shown_no_access_to_create_issue_on_jira_status).on_event(:show_no_access_to_create_issue_on_jira_status).on(:no_access_to_create_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_trying_to_create_issue_on_jira_status).to(:shown_no_connection_trying_to_create_issue_on_jira_status).on_event(:show_no_connection_trying_to_create_issue_on_jira_status).on(:no_connection_trying_to_create_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_trying_to_create_issue_on_jira_status).to(:shown_unknown_error_trying_to_create_issue_on_jira_status).on_event(:show_unknown_error_trying_to_create_issue_on_jira_status).on(:unknown_error_trying_to_create_issue_on_jira_status) }
+      end
+
+      context 'no connection' do
+        let(:status) { 404 }
+
+        it { expect(task).not_to transition_from(:hidden_created_issue_on_jira_status).to(:shown_created_issue_on_jira_status).on_event(:show_created_issue_on_jira_status).on(:created_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_create_issue_on_jira_status).to(:shown_no_access_to_create_issue_on_jira_status).on_event(:show_no_access_to_create_issue_on_jira_status).on(:no_access_to_create_issue_on_jira_status) }
+        it { expect(task).to transition_from(:hidden_no_connection_trying_to_create_issue_on_jira_status).to(:shown_no_connection_trying_to_create_issue_on_jira_status).on_event(:show_no_connection_trying_to_create_issue_on_jira_status).on(:no_connection_trying_to_create_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_unknown_error_trying_to_create_issue_on_jira_status).to(:shown_unknown_error_trying_to_create_issue_on_jira_status).on_event(:show_unknown_error_trying_to_create_issue_on_jira_status).on(:unknown_error_trying_to_create_issue_on_jira_status) }
+      end
+
+      context 'unknown error' do
+        let(:status) { 500 }
+
+        it { expect(task).not_to transition_from(:hidden_created_issue_on_jira_status).to(:shown_created_issue_on_jira_status).on_event(:show_created_issue_on_jira_status).on(:created_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_access_to_create_issue_on_jira_status).to(:shown_no_access_to_create_issue_on_jira_status).on_event(:show_no_access_to_create_issue_on_jira_status).on(:no_access_to_create_issue_on_jira_status) }
+        it { expect(task).not_to transition_from(:hidden_no_connection_trying_to_create_issue_on_jira_status).to(:shown_no_connection_trying_to_create_issue_on_jira_status).on_event(:show_no_connection_trying_to_create_issue_on_jira_status).on(:no_connection_trying_to_create_issue_on_jira_status) }
+        it { expect(task).to transition_from(:hidden_unknown_error_trying_to_create_issue_on_jira_status).to(:shown_unknown_error_trying_to_create_issue_on_jira_status).on_event(:show_unknown_error_trying_to_create_issue_on_jira_status).on(:unknown_error_trying_to_create_issue_on_jira_status) }
+      end
+    end
   end
 
   describe 'class_methods' do
