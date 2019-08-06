@@ -3,7 +3,6 @@
 source 'https://rubygems.org'
 
 # Runtime dependencies
-gem 'aasm'
 gem 'actionpack'
 gem 'actionview'
 gem 'activerecord'

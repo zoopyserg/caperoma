@@ -2,7 +2,6 @@
 
 class Task < ActiveRecord::Base
   include Git
-  include AASM
 
   belongs_to :project
   belongs_to :daily_report
@@ -16,341 +15,277 @@ class Task < ActiveRecord::Base
   scope :unfinished, -> { where(finished_at: nil) }
   scope :finished, -> { where.not(finished_at: nil) }
 
-  aasm column: 'state', whiny_transitions: false do
-    state :created, initial: true
-    state :started
-    state :finished
-    state :paused
-    state :aborted
-    state :aborted_without_time
+  after_update :say_starting, if: [ :status_changed?, :status_started? ]
+  after_update :set_start_time, if: [ :status_changed?, :status_started? ]
+  after_update :create_jira, if: [ :status_changed?, :status_started? ]
+  after_update :start_jira, if: [ :status_changed?, :status_started? ]
+  after_update :create_pivotal, if: [ :status_changed?, :status_started? ]
+  after_update :start_pivotal, if: [ :status_changed?, :status_started? ]
+  after_update :say_started, if: [ :status_changed?, :status_started? ]
 
-    event :start, binding_events: %i[set_start_time create_jira start_jira create_pivotal start_pivotal], before: %i[say_starting], after: [:say_started] do
-      transitions from: :created, to: :started
-    end
+  after_update :say_finishing, if: [ :status_changed?, :status_finished? ]
+  after_update :save_finished_time, if: [ :status_changed?, :status_finished? ]
+  after_update :close_jira, if: [ :status_changed?, :status_finished? ]
+  after_update :finish_pivotal, if: [ :status_changed?, :status_finished? ]
+  after_update :show_time_spent, if: [ :status_changed?, :status_finished? ]
+  after_update :say_finished, if: [ :status_changed?, :status_finished? ]
 
-    event :finish, binding_events: %i[close_jira finish_pivotal], before: %i[say_finishing save_finished_time], after: %i[show_time_spent say_finished] do
-      transitions from: :started, to: :finished
-    end
+  after_update :say_pausing, if: [ :status_changed?, :status_paused? ]
+  after_update :close_jira, if: [ :status_changed?, :status_paused? ]
+  after_update :finish_pivotal, if: [ :status_changed?, :status_paused? ]
+  after_update :save_finished_time, if: [ :status_changed?, :status_paused? ]
+  after_update :show_time_spent, if: [ :status_changed?, :status_finished? ]
+  after_update :say_paused, if: [ :status_changed?, :status_paused? ]
 
-    event :pause, binding_events: %i[close_jira finish_pivotal], before: %i[say_pausing save_finished_time], after: %i[show_time_spent say_paused] do
-      transitions from: :started, to: :paused
-    end
+  after_update :say_aborting, if: [ :status_changed?, :status_aborted? ]
+  after_update :close_jira, if: [ :status_changed?, :status_aborted? ]
+  after_update :finish_pivotal, if: [ :status_changed?, :status_aborted? ]
+  after_update :save_finished_time, if: [ :status_changed?, :status_aborted? ]
+  after_update :show_time_spent, if: [ :status_changed?, :status_finished? ]
+  after_update :say_aborted, if: [ :status_changed?, :status_aborted? ]
 
-    event :abort, binding_events: %i[close_jira finish_pivotal], before: %i[say_aborting save_finished_time], after: %i[show_time_spent say_aborted] do
-      transitions from: :started, to: :aborted
-    end
+  after_update :say_aborting_without_time, if: [ :status_changed?, :status_aborted_without_time? ]
+  after_update :close_jira, if: [ :status_changed?, :status_aborted_without_time? ]
+  after_update :save_finished_time, if: [ :status_changed?, :status_aborted_without_time? ]
+  after_update :show_time_spent, if: [ :status_changed?, :status_finished? ]
+  after_update :say_aborted_without_time, if: [ :status_changed?, :status_aborted_without_time? ]
 
-    event :abort_without_time, binding_events: [:close_jira], before: %i[say_aborting_without_time save_finished_time], after: %i[show_time_spent say_aborted_without_time] do
-      transitions from: :started, to: :aborted_without_time
-    end
+  after_update :show_created_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_created_jira?, :not_test?, :create_on_jira?]
+  after_update :show_no_access_to_create_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_created_jira?, :not_test?, :create_on_jira?]
+  after_update :show_no_connection_trying_to_create_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_created_jira?, :not_test?, :create_on_jira?]
+  after_update :show_unknown_error_trying_to_create_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_created_jira?, :not_test?, :create_on_jira?]
+  after_update :say_creating_in_jira, if: [:jira_state_changed?, :jira_state_created_jira?, :not_test?, :create_on_jira?]
+  after_update :output_jira_key, if: [:jira_state_changed?, :jira_state_created_jira?, :not_test?, :create_on_jira?]
+
+  after_update :show_started_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_started_jira?, :not_test?, :start_on_jira?]
+  after_update :show_no_access_to_start_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_started_jira?, :not_test?, :start_on_jira?]
+  after_update :show_no_connection_to_start_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_started_jira?, :not_test?, :start_on_jira?]
+  after_update :show_unknown_error_on_starting_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_started_jira?, :not_test?, :start_on_jira?]
+  after_update :say_starting_in_jira, if: [:jira_state_changed?, :jira_state_started_jira?, :not_test?, :start_on_jira?]
+
+  after_update :create_jira_worklog, if: [:jira_state_changed?, :jira_state_closed_jira?, :not_test? ]
+  after_update :show_closed_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_closed_jira?, :not_test? ]
+  after_update :show_no_access_to_close_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_closed_jira?, :not_test? ]
+  after_update :show_no_connection_to_close_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_closed_jira?, :not_test? ]
+  after_update :show_unknown_error_closing_issue_on_jira_status, if: [:jira_state_changed?, :jira_state_closed_jira?, :not_test? ]
+  after_update :say_closing_in_jira, if: [:jira_state_changed?, :jira_state_closed_jira?, :not_test? ]
+
+  after_update :show_created_issue_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_created_pivotal?, :not_test?, :create_on_pivotal?]
+  after_update :show_no_access_trying_to_create_issue_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_created_pivotal?, :not_test?, :create_on_pivotal?]
+  after_update :show_no_connection_trying_to_create_issue_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_created_pivotal?, :not_test?, :create_on_pivotal?]
+  after_update :show_unknown_error_trying_to_create_issue_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_created_pivotal?, :not_test?, :create_on_pivotal?]
+  after_update :say_creating_in_pivotal, if: [:pivotal_state_changed?, :pivotal_state_created_pivotal?, :not_test?, :create_on_pivotal?]
+
+  after_update :show_start_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_started_pivotal?, :not_test?, :start_on_pivotal?]
+  after_update :show_no_access_to_start_issue_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_started_pivotal?, :not_test?, :start_on_pivotal?]
+  after_update :show_no_connection_to_start_issue_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_started_pivotal?, :not_test?, :start_on_pivotal?]
+  after_update :show_unknown_error_on_starting_issue_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_started_pivotal?, :not_test?, :start_on_pivotal?]
+  after_update :say_starting_in_pivotal, if: [:pivotal_state_changed?, :pivotal_state_started_pivotal?, :not_test?, :start_on_pivotal?]
+
+  after_update :say_finishing, if: [:pivotal_state_changed?, :pivotal_state_finished_pivotal?, :not_test?, :finish_on_pivotal?]
+  after_update :show_finished_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_finished_pivotal?, :not_test?, :finish_on_pivotal?]
+  after_update :show_no_access_to_finish_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_finished_pivotal?, :not_test?, :finish_on_pivotal?]
+  after_update :show_no_connection_to_finish_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_finished_pivotal?, :not_test?, :finish_on_pivotal?]
+  after_update :show_unknown_error_on_finishing_on_pivotal_status, if: [:pivotal_state_changed?, :pivotal_state_finished_pivotal?, :not_test?, :finish_on_pivotal?]
+
+  after_update :show_loged_work_to_jira_status, if: [ :jira_worklog_state_updated?, :jira_worklog_state_created_jira_worklog?, :not_test?, :should_log_work? ]
+  after_update :show_no_access_to_log_work_to_jira_status, if: [ :jira_worklog_state_updated?, :jira_worklog_state_created_jira_worklog?, :not_test?, :should_log_work? ]
+  after_update :show_no_connection_to_log_work_to_jira_status, if: [ :jira_worklog_state_updated?, :jira_worklog_state_created_jira_worklog?, :not_test?, :should_log_work? ]
+  after_update :show_unknown_error_loging_work_to_jira_status, if: [ :jira_worklog_state_updated?, :jira_worklog_state_created_jira_worklog?, :not_test?, :should_log_work? ]
+  after_update :say_logging_started, if: [ :jira_worklog_state_updated?, :jira_worklog_state_created_jira_worklog?, :not_test?, :should_log_work? ]
+
+  after_update :output_jira_key, if: [:output_jira_key?, :jira_key_state_updated?, :jira_key_state_shown_jira_key? ]
+  after_update :say_started_issue_on_pivotal, if: [:start_on_pivotal_status_state_changed?, :start_on_pivotal_status_state_shown_start_on_pivotal_status?, :started_issue_on_pivotal? ]
+  after_update :say_no_access_to_start_issue_on_pivotal, if: [:no_access_to_start_issue_on_pivotal_status_state_changed?, :no_access_to_start_issue_on_pivotal_status_state_shown_no_access_to_start_issue_on_pivotal_status?, :no_access_to_start_issue_on_pivotal?]
+  after_update :say_no_connection_to_start_issue_on_pivotal, if: [:no_connection_to_start_issue_on_pivotal_status_state_changed?, :no_connection_to_start_issue_on_pivotal_status_state_shown_no_connection_to_start_issue_on_pivotal_status?, :no_connection_to_start_issue_on_pivotal?]
+  after_update :say_unknown_error_on_starting_issue_on_pivotal, if: [:unknown_error_on_starting_issue_on_pivotal_status_state_changed?, :unknown_error_on_starting_issue_on_pivotal_status_state_shown_unknown_error_on_starting_issue_on_pivotal_status?, :unknown_error_on_starting_issue_on_pivotal?]
+  after_update :say_finished_on_pivotal, if: [:finished_on_pivotal_status_state_changed?, :finished_on_pivotal_status_state_shown_finished_on_pivotal_status?, :finished_on_pivotal?]
+  after_update :say_no_access_to_finish_on_pivotal, if: [:no_access_to_finish_on_pivotal_status_state_changed?, :no_access_to_finish_on_pivotal_status_state_shown_no_access_to_finish_on_pivotal_status?, :no_access_to_finish_on_pivotal?]
+  after_update :say_no_connection_to_finish_on_pivotal, if: [:no_connection_to_finish_on_pivotal_status_state_changed?, :no_connection_to_finish_on_pivotal_status_state_shown_no_connection_to_finish_on_pivotal_status?, :no_connection_to_finish_on_pivotal?]
+  after_update :say_unknown_error_on_finishing_on_pivotal, if: [:unknown_error_on_finishing_on_pivotal_status_state_changed?, :unknown_error_on_finishing_on_pivotal_status_state_shown_unknown_error_on_finishing_on_pivotal_status?, :unknown_error_on_finishing_on_pivotal?]
+  after_update :say_started_issue_on_jira, if: [:started_issue_on_jira_status_state_changed?, :started_issue_on_jira_status_state_shown_started_issue_on_jira_status?, :started_issue_on_jira?]
+  after_update :say_no_access_to_start_issue_on_jira, if: [:no_access_to_start_issue_on_jira_status_state_changed?, :no_access_to_start_issue_on_jira_status_state_shown_no_access_to_start_issue_on_jira_status?, :no_access_to_start_issue_on_jira?]
+  after_update :say_no_connection_to_start_issue_on_jira, if: [:no_connection_to_start_issue_on_jira_status_state_changed?, :no_connection_to_start_issue_on_jira_status_state_shown_no_connection_to_start_issue_on_jira_status?, :no_connection_to_start_issue_on_jira?]
+  after_update :say_unknown_error_on_starting_issue_on_jira, if: [:unknown_error_on_starting_issue_on_jira_status_state_changed?, :unknown_error_on_starting_issue_on_jira_status_state_shown_unknown_error_on_starting_issue_on_jira_status?, :unknown_error_on_starting_issue_on_jira?]
+  after_update :say_closed_issue_on_jira, if: [:closed_issue_on_jira_status_state_changed?, :closed_issue_on_jira_status_state_shown_closed_issue_on_jira_status?, :closed_issue_on_jira?]
+  after_update :say_no_access_to_close_issue_on_jira, if: [:no_access_to_close_issue_on_jira_status_state_changed?, :no_access_to_close_issue_on_jira_status_state_shown_no_access_to_close_issue_on_jira_status?, :no_access_to_close_issue_on_jira?]
+  after_update :say_no_connection_to_close_issue_on_jira, if: [:no_connection_to_close_issue_on_jira_status_state_changed?, :no_connection_to_close_issue_on_jira_status_state_shown_no_connection_to_close_issue_on_jira_status?, :no_connection_to_close_issue_on_jira?]
+  after_update :say_unknown_error_closing_issue_on_jira, if: [:unknown_error_closing_issue_on_jira_status_state_changed?, :unknown_error_closing_issue_on_jira_status_state_shown_unknown_error_closing_issue_on_jira_status?, :unknown_error_closing_issue_on_jira?]
+  after_update :say_loged_work_to_jira, if: [:loged_work_to_jira_status_state_changed?, :loged_work_to_jira_status_state_shown_loged_work_to_jira_status?, :loged_work_to_jira?]
+  after_update :say_no_access_to_log_work_to_jira, if: [:no_access_to_log_work_to_jira_status_state_changed?, :no_access_to_log_work_to_jira_status_state_shown_no_access_to_log_work_to_jira_status?, :no_access_to_log_work_to_jira?]
+  after_update :say_no_connection_to_log_work_to_jira, if: [:no_connection_to_log_work_to_jira_status_state_changed?, :no_connection_to_log_work_to_jira_status_state_shown_no_connection_to_log_work_to_jira_status?, :no_connection_to_log_work_to_jira?]
+  after_update :say_unknown_error_loging_work_to_jira, if: [:unknown_error_loging_work_to_jira_status_state_changed?, :unknown_error_loging_work_to_jira_status_state_shown_unknown_error_loging_work_to_jira_status?, :unknown_error_loging_work_to_jira?]
+  after_update :say_created_issue_on_pivotal, if: [:created_issue_on_pivotal_status_state_changed?, :created_issue_on_pivotal_status_state_shown_created_issue_on_pivotal_status?, :created_issue_on_pivotal?]
+  after_update :say_no_access_trying_to_create_issue_on_pivotal, if: [:no_access_trying_to_create_issue_on_pivotal_status_state_changed?, :no_access_trying_to_create_issue_on_pivotal_status_state_shown_no_access_trying_to_create_issue_on_pivotal_status?, :no_access_trying_to_create_issue_on_pivotal?]
+  after_update :say_no_connection_trying_to_create_issue_on_pivotal, if: [:no_connection_trying_to_create_issue_on_pivotal_status_state_changed?, :no_connection_trying_to_create_issue_on_pivotal_status_state_shown_no_connection_trying_to_create_issue_on_pivotal_status?, :no_connection_trying_to_create_issue_on_pivotal?]
+  after_update :say_no_connection_trying_to_create_issue_on_pivotal, if: [:unknown_error_trying_to_create_issue_on_pivotal_status_state_changed?, :unknown_error_trying_to_create_issue_on_pivotal_status_state_shown_unknown_error_trying_to_create_issue_on_pivotal_status?, :unknown_error_trying_to_create_issue_on_pivotal?]
+  after_update :say_created_issue_on_jira, if: [:created_issue_on_jira_status_state_changed?, :created_issue_on_jira_status_state_shown_created_issue_on_jira_status?, :created_issue_on_jira?]
+  after_update :say_no_access_to_create_issue_on_jira, if: [:no_access_to_create_issue_on_jira_status_state_changed?, :no_access_to_create_issue_on_jira_status_state_shown_no_access_to_create_issue_on_jira_status?, :no_access_to_create_issue_on_jira?]
+  after_update :say_no_connection_trying_to_create_issue_on_jira, if: [:no_connection_trying_to_create_issue_on_jira_status_state_changed?, :no_connection_trying_to_create_issue_on_jira_status_state_shown_no_connection_trying_to_create_issue_on_jira_status?, :no_connection_trying_to_create_issue_on_jira?]
+  after_update :say_unknown_error_trying_to_create_issue_on_jira, if: [:unknown_error_trying_to_create_issue_on_jira_status_state_changed?, :unknown_error_trying_to_create_issue_on_jira_status_state_shown_unknown_error_trying_to_create_issue_on_jira_status?, :unknown_error_trying_to_create_issue_on_jira?]
+
+  def start
+    self.update state: 'started'
   end
 
-  aasm(:jira, column: 'jira_state', whiny_transitions: false) do
-    state :pending_jira, initial: true
-    state :created_jira
-    state :started_jira
-    state :closed_jira
-
-    event :create_jira, binding_events: %i[show_created_issue_on_jira_status show_no_access_to_create_issue_on_jira_status show_no_connection_trying_to_create_issue_on_jira_status show_unknown_error_trying_to_create_issue_on_jira_status], before: [:say_creating_in_jira], after: [:output_jira_key], guards: %i[not_test? create_on_jira?] do
-      transitions from: :pending_jira, to: :created_jira
-    end
-
-    event :start_jira, binding_events: %i[show_started_issue_on_jira_status show_no_access_to_start_issue_on_jira_status show_no_connection_to_start_issue_on_jira_status show_unknown_error_on_starting_issue_on_jira_status], before: [:say_starting_in_jira], guards: %i[not_test? start_on_jira?] do
-      transitions from: :created_jira, to: :started_jira
-    end
-
-    event :close_jira, binding_events: %i[create_jira_worklog show_closed_issue_on_jira_status show_no_access_to_close_issue_on_jira_status show_no_connection_to_close_issue_on_jira_status show_unknown_error_closing_issue_on_jira_status], before: [:say_closing_in_jira], guards: :not_test? do
-      transitions from: :started_jira, to: :closed_jira
-    end
+  def finish
+    self.update state: 'finished'
   end
 
-  aasm(:pivotal, column: 'pivotal_state', whiny_transitions: false) do
-    state :pending_pivotal, initial: true
-    state :created_pivotal
-    state :started_pivotal
-    state :finished_pivotal
-
-    event :create_pivotal, binding_events: %i[show_created_issue_on_pivotal_status show_no_access_trying_to_create_issue_on_pivotal_status show_no_connection_trying_to_create_issue_on_pivotal_status show_unknown_error_trying_to_create_issue_on_pivotal_status], before: [:say_creating_in_pivotal], guards: %i[not_test? create_on_pivotal?] do
-      transitions from: :pending_pivotal, to: :created_pivotal
-    end
-
-    event :start_pivotal, binding_events: %i[show_start_on_pivotal_status show_no_access_to_start_issue_on_pivotal_status show_no_connection_to_start_issue_on_pivotal_status show_unknown_error_on_starting_issue_on_pivotal_status], before: [:say_starting_in_pivotal], guards: %i[not_test? start_on_pivotal?] do
-      transitions from: :created_pivotal, to: :started_pivotal
-    end
-
-    event :finish_pivotal, before: %i[say_finishing show_finished_on_pivotal_status show_no_access_to_finish_on_pivotal_status show_no_connection_to_finish_on_pivotal_status show_unknown_error_on_finishing_on_pivotal_status], guards: %i[not_test? finish_on_pivotal?] do
-      transitions from: :started_pivotal, to: :finished_pivotal
-    end
+  def pause
+    self.update state: 'paused'
   end
 
-  aasm(:jira_worklog, column: 'jira_worklog_state', whiny_transitions: false) do
-    state :pending_jira_worklog, initial: true
-    state :created_jira_worklog
-
-    event :create_jira_worklog, binding_events: %i[show_loged_work_to_jira_status show_no_access_to_log_work_to_jira_status show_no_connection_to_log_work_to_jira_status show_unknown_error_loging_work_to_jira_status], before: [:say_logging_started], guards: %i[not_test? should_log_work?] do
-      transitions from: :pending_jira_worklog, to: :created_jira_worklog
-    end
+  def abort
+    self.update state: 'aborted'
   end
 
-  aasm(:jira_key, column: 'jira_key_state', whiny_transitions: false) do
-    state :hidden_jira_key, initial: true
-    state :shown_jira_key
-
-    event :show_jira_key, before: [:output_jira_key], guards: [:output_jira_key?] do
-      transitions from: :hidden_jira_key, to: :shown_jira_key
-    end
+  def abort_without_time
+    self.update state: 'aborted_without_time'
   end
 
-  aasm(:start_on_pivotal_status, column: 'start_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_start_on_pivotal_status, initial: true
-    state :shown_start_on_pivotal_status
-
-    event :show_start_on_pivotal_status, before: [:say_started_issue_on_pivotal], guards: [:started_issue_on_pivotal?] do
-      transitions from: :hidden_start_on_pivotal_status, to: :shown_start_on_pivotal_status
-    end
+  def create_jira
+    self.update jira_state: 'created'
   end
 
-  aasm(:no_access_to_start_issue_on_pivotal_status, column: 'no_access_to_start_issue_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_no_access_to_start_issue_on_pivotal_status, initial: true
-    state :shown_no_access_to_start_issue_on_pivotal_status
-
-    event :show_no_access_to_start_issue_on_pivotal_status, before: [:say_no_access_to_start_issue_on_pivotal], guards: [:no_access_to_start_issue_on_pivotal?] do
-      transitions from: :hidden_no_access_to_start_issue_on_pivotal_status, to: :shown_no_access_to_start_issue_on_pivotal_status
-    end
+  def start_jira
+    self.update jira_state: 'started'
   end
 
-  aasm(:no_connection_to_start_issue_on_pivotal_status, column: 'no_connection_to_start_issue_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_no_connection_to_start_issue_on_pivotal_status, initial: true
-    state :shown_no_connection_to_start_issue_on_pivotal_status
-
-    event :show_no_connection_to_start_issue_on_pivotal_status, before: [:say_no_connection_to_start_issue_on_pivotal], guards: [:no_connection_to_start_issue_on_pivotal?] do
-      transitions from: :hidden_no_connection_to_start_issue_on_pivotal_status, to: :shown_no_connection_to_start_issue_on_pivotal_status
-    end
+  def close_jira
+    self.update jira_state: 'closed'
   end
 
-  aasm(:unknown_error_on_starting_issue_on_pivotal_status, column: 'unknown_error_on_starting_issue_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_unknown_error_on_starting_issue_on_pivotal_status, initial: true
-    state :shown_unknown_error_on_starting_issue_on_pivotal_status
-
-    event :show_unknown_error_on_starting_issue_on_pivotal_status, before: [:say_unknown_error_on_starting_issue_on_pivotal], guards: [:unknown_error_on_starting_issue_on_pivotal?] do
-      transitions from: :hidden_unknown_error_on_starting_issue_on_pivotal_status, to: :shown_unknown_error_on_starting_issue_on_pivotal_status
-    end
+  def create_pivotal
+    self.update :pivotal_state, 'created'
   end
 
-  aasm(:finished_on_pivotal_status, column: 'finished_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_finished_on_pivotal_status, initial: true
-    state :shown_finished_on_pivotal_status
-
-    event :show_finished_on_pivotal_status, before: [:say_finished_on_pivotal], guards: [:finished_on_pivotal?] do
-      transitions from: :hidden_finished_on_pivotal_status, to: :shown_finished_on_pivotal_status
-    end
+  def start_pivotal
+    self.update :pivotal_state, 'started'
   end
 
-  aasm(:no_access_to_finish_on_pivotal_status, column: 'no_access_to_finish_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_no_access_to_finish_on_pivotal_status, initial: true
-    state :shown_no_access_to_finish_on_pivotal_status
-
-    event :show_no_access_to_finish_on_pivotal_status, before: [:say_no_access_to_finish_on_pivotal], guards: [:no_access_to_finish_on_pivotal?] do
-      transitions from: :hidden_no_access_to_finish_on_pivotal_status, to: :shown_no_access_to_finish_on_pivotal_status
-    end
+  def finish_pivotal
+    self.update :pivotal_state, 'finished'
   end
 
-  aasm(:no_connection_to_finish_on_pivotal_status, column: 'no_connection_to_finish_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_no_connection_to_finish_on_pivotal_status, initial: true
-    state :shown_no_connection_to_finish_on_pivotal_status
-
-    event :show_no_connection_to_finish_on_pivotal_status, before: [:say_no_connection_to_finish_on_pivotal], guards: [:no_connection_to_finish_on_pivotal?] do
-      transitions from: :hidden_no_connection_to_finish_on_pivotal_status, to: :shown_no_connection_to_finish_on_pivotal_status
-    end
+  def create_jira_worklog
+    self.update jira_worklog_state: 'created_jira_worklog'
   end
 
-  aasm(:unknown_error_on_finishing_on_pivotal_status, column: 'unknown_error_on_finishing_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_unknown_error_on_finishing_on_pivotal_status, initial: true
-    state :shown_unknown_error_on_finishing_on_pivotal_status
-
-    event :show_unknown_error_on_finishing_on_pivotal_status, before: [:say_unknown_error_on_finishing_on_pivotal], guards: [:unknown_error_on_finishing_on_pivotal?] do
-      transitions from: :hidden_unknown_error_on_finishing_on_pivotal_status, to: :shown_unknown_error_on_finishing_on_pivotal_status
-    end
+  def show_jira_key
+    self.update jira_key_state: 'shown_jira_key'
   end
 
-  aasm(:started_issue_on_jira_status, column: 'started_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_started_issue_on_jira_status, initial: true
-    state :shown_started_issue_on_jira_status
-
-    event :show_started_issue_on_jira_status, before: [:say_started_issue_on_jira], guards: [:started_issue_on_jira?] do
-      transitions from: :hidden_started_issue_on_jira_status, to: :shown_started_issue_on_jira_status
-    end
+  def show_start_on_pivotal_status
+    self.update start_on_pivotal_status_state: 'shown_start_on_pivotal_status'
   end
 
-  aasm(:no_access_to_start_issue_on_jira_status, column: 'no_access_to_start_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_no_access_to_start_issue_on_jira_status, initial: true
-    state :shown_no_access_to_start_issue_on_jira_status
-
-    event :show_no_access_to_start_issue_on_jira_status, before: [:say_no_access_to_start_issue_on_jira], guards: [:no_access_to_start_issue_on_jira?] do
-      transitions from: :hidden_no_access_to_start_issue_on_jira_status, to: :shown_no_access_to_start_issue_on_jira_status
-    end
+  def show_no_access_to_start_issue_on_pivotal_status
+    self.update no_access_to_start_issue_on_pivotal_status_state: 'shown_no_access_to_start_issue_on_pivotal_status'
   end
 
-  aasm(:no_connection_to_start_issue_on_jira_status, column: 'no_connection_to_start_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_no_connection_to_start_issue_on_jira_status, initial: true
-    state :shown_no_connection_to_start_issue_on_jira_status
-
-    event :show_no_connection_to_start_issue_on_jira_status, before: [:say_no_connection_to_start_issue_on_jira], guards: [:no_connection_to_start_issue_on_jira?] do
-      transitions from: :hidden_no_connection_to_start_issue_on_jira_status, to: :shown_no_connection_to_start_issue_on_jira_status
-    end
+  def show_no_connection_to_start_issue_on_pivotal_status
+    self.update no_connection_to_start_issue_on_pivotal_status_state: 'shown_no_connection_to_start_issue_on_pivotal_status'
   end
 
-  aasm(:unknown_error_on_starting_issue_on_jira_status, column: 'unknown_error_on_starting_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_unknown_error_on_starting_issue_on_jira_status, initial: true
-    state :shown_unknown_error_on_starting_issue_on_jira_status
-
-    event :show_unknown_error_on_starting_issue_on_jira_status, before: [:say_unknown_error_on_starting_issue_on_jira], guards: [:unknown_error_on_starting_issue_on_jira?] do
-      transitions from: :hidden_unknown_error_on_starting_issue_on_jira_status, to: :shown_unknown_error_on_starting_issue_on_jira_status
-    end
+  def show_unknown_error_on_starting_issue_on_pivotal_status
+    self.update unknown_error_on_starting_issue_on_pivotal_status_state: 'shown_unknown_error_on_starting_issue_on_pivotal_status'
   end
 
-  aasm(:closed_issue_on_jira_status, column: 'closed_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_closed_issue_on_jira_status, initial: true
-    state :shown_closed_issue_on_jira_status
-
-    event :show_closed_issue_on_jira_status, before: [:say_closed_issue_on_jira], guards: [:closed_issue_on_jira?] do
-      transitions from: :hidden_closed_issue_on_jira_status, to: :shown_closed_issue_on_jira_status
-    end
+  def show_finished_on_pivotal_status
+    self.update finished_on_pivotal_status_state: 'shown_finished_on_pivotal_status'
   end
 
-  aasm(:no_access_to_close_issue_on_jira_status, column: 'no_access_to_close_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_no_access_to_close_issue_on_jira_status, initial: true
-    state :shown_no_access_to_close_issue_on_jira_status
-
-    event :show_no_access_to_close_issue_on_jira_status, before: [:say_no_access_to_close_issue_on_jira], guards: [:no_access_to_close_issue_on_jira?] do
-      transitions from: :hidden_no_access_to_close_issue_on_jira_status, to: :shown_no_access_to_close_issue_on_jira_status
-    end
+  def show_no_access_to_finish_on_pivotal_status
+    self.update no_access_to_finish_on_pivotal_status_state: 'shown_no_access_to_finish_on_pivotal_status'
   end
 
-  aasm(:no_connection_to_close_issue_on_jira_status, column: 'no_connection_to_close_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_no_connection_to_close_issue_on_jira_status, initial: true
-    state :shown_no_connection_to_close_issue_on_jira_status
-
-    event :show_no_connection_to_close_issue_on_jira_status, before: [:say_no_connection_to_close_issue_on_jira], guards: [:no_connection_to_close_issue_on_jira?] do
-      transitions from: :hidden_no_connection_to_close_issue_on_jira_status, to: :shown_no_connection_to_close_issue_on_jira_status
-    end
+  def show_no_connection_to_finish_on_pivotal_status
+    self.update no_connection_to_finish_on_pivotal_status_state: 'shown_no_connection_to_finish_on_pivotal_status'
   end
 
-  aasm(:unknown_error_closing_issue_on_jira_status, column: 'unknown_error_closing_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_unknown_error_closing_issue_on_jira_status, initial: true
-    state :shown_unknown_error_closing_issue_on_jira_status
-
-    event :show_unknown_error_closing_issue_on_jira_status, before: [:say_unknown_error_closing_issue_on_jira], guards: [:unknown_error_closing_issue_on_jira?] do
-      transitions from: :hidden_unknown_error_closing_issue_on_jira_status, to: :shown_unknown_error_closing_issue_on_jira_status
-    end
+  def show_unknown_error_on_finishing_on_pivotal_status
+    self.update unknown_error_on_finishing_on_pivotal_status_state: 'shown_unknown_error_on_finishing_on_pivotal_status'
   end
 
-  aasm(:loged_work_to_jira_status, column: 'loged_work_to_jira_status_state', whiny_transitions: false) do
-    state :hidden_loged_work_to_jira_status, initial: true
-    state :shown_loged_work_to_jira_status
-
-    event :show_loged_work_to_jira_status, before: [:say_loged_work_to_jira], guards: [:loged_work_to_jira?] do
-      transitions from: :hidden_loged_work_to_jira_status, to: :shown_loged_work_to_jira_status
-    end
+  def show_started_issue_on_jira_status
+    self.update started_issue_on_jira_status_state: 'shown_started_issue_on_jira_status'
   end
 
-  aasm(:no_access_to_log_work_to_jira_status, column: 'no_access_to_log_work_to_jira_status_state', whiny_transitions: false) do
-    state :hidden_no_access_to_log_work_to_jira_status, initial: true
-    state :shown_no_access_to_log_work_to_jira_status
-
-    event :show_no_access_to_log_work_to_jira_status, before: [:say_no_access_to_log_work_to_jira], guards: [:no_access_to_log_work_to_jira?] do
-      transitions from: :hidden_no_access_to_log_work_to_jira_status, to: :shown_no_access_to_log_work_to_jira_status
-    end
+  def show_no_access_to_start_issue_on_jira_status
+    self.update no_access_to_start_issue_on_jira_status_state: 'shown_no_access_to_start_issue_on_jira_status'
   end
 
-  aasm(:no_connection_to_log_work_to_jira_status, column: 'no_connection_to_log_work_to_jira_status_state', whiny_transitions: false) do
-    state :hidden_no_connection_to_log_work_to_jira_status, initial: true
-    state :shown_no_connection_to_log_work_to_jira_status
-
-    event :show_no_connection_to_log_work_to_jira_status, before: [:say_no_connection_to_log_work_to_jira], guards: [:no_connection_to_log_work_to_jira?] do
-      transitions from: :hidden_no_connection_to_log_work_to_jira_status, to: :shown_no_connection_to_log_work_to_jira_status
-    end
+  def show_no_connection_to_start_issue_on_jira_status
+    self.update no_connection_to_start_issue_on_jira_status_state: 'shown_no_connection_to_start_issue_on_jira_status'
   end
 
-  aasm(:unknown_error_loging_work_to_jira_status, column: 'unknown_error_loging_work_to_jira_status_state', whiny_transitions: false) do
-    state :hidden_unknown_error_loging_work_to_jira_status, initial: true
-    state :shown_unknown_error_loging_work_to_jira_status
-
-    event :show_unknown_error_loging_work_to_jira_status, before: [:say_unknown_error_loging_work_to_jira], guards: [:unknown_error_loging_work_to_jira?] do
-      transitions from: :hidden_unknown_error_loging_work_to_jira_status, to: :shown_unknown_error_loging_work_to_jira_status
-    end
+  def show_unknown_error_on_starting_issue_on_jira_status
+    self.update unknown_error_on_starting_issue_on_jira_status_state: 'shown_unknown_error_on_starting_issue_on_jira_status'
   end
 
-  aasm(:created_issue_on_pivotal_status, column: 'created_issue_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_created_issue_on_pivotal_status, initial: true
-    state :shown_created_issue_on_pivotal_status
-
-    event :show_created_issue_on_pivotal_status, before: [:say_created_issue_on_pivotal], after: [:save_data_received_after_created_issue_on_pivotal], guards: [:created_issue_on_pivotal?] do
-      transitions from: :hidden_created_issue_on_pivotal_status, to: :shown_created_issue_on_pivotal_status
-    end
+  def show_closed_issue_on_jira_status
+    self.update closed_issue_on_jira_status_state: 'shown_closed_issue_on_jira_status'
   end
 
-  aasm(:no_access_trying_to_create_issue_on_pivotal_status, column: 'no_access_trying_to_create_issue_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_no_access_trying_to_create_issue_on_pivotal_status, initial: true
-    state :shown_no_access_trying_to_create_issue_on_pivotal_status
-
-    event :show_no_access_trying_to_create_issue_on_pivotal_status, before: [:say_no_access_trying_to_create_issue_on_pivotal], guards: [:no_access_trying_to_create_issue_on_pivotal?] do
-      transitions from: :hidden_no_access_trying_to_create_issue_on_pivotal_status, to: :shown_no_access_trying_to_create_issue_on_pivotal_status
-    end
+  def show_no_access_to_close_issue_on_jira_status
+    self.update no_access_to_close_issue_on_jira_status_state: 'shown_no_access_to_close_issue_on_jira_status'
   end
 
-  aasm(:no_connection_trying_to_create_issue_on_pivotal_status, column: 'no_connection_trying_to_create_issue_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_no_connection_trying_to_create_issue_on_pivotal_status, initial: true
-    state :shown_no_connection_trying_to_create_issue_on_pivotal_status
-
-    event :show_no_connection_trying_to_create_issue_on_pivotal_status, before: [:say_no_connection_trying_to_create_issue_on_pivotal], guards: [:no_connection_trying_to_create_issue_on_pivotal?] do
-      transitions from: :hidden_no_connection_trying_to_create_issue_on_pivotal_status, to: :shown_no_connection_trying_to_create_issue_on_pivotal_status
-    end
+  def show_no_connection_to_close_issue_on_jira_status
+    self.update no_connection_to_close_issue_on_jira_status_state: 'shown_no_connection_to_close_issue_on_jira_status'
   end
 
-  aasm(:unknown_error_trying_to_create_issue_on_pivotal_status, column: 'unknown_error_trying_to_create_issue_on_pivotal_status_state', whiny_transitions: false) do
-    state :hidden_unknown_error_trying_to_create_issue_on_pivotal_status, initial: true
-    state :shown_unknown_error_trying_to_create_issue_on_pivotal_status
-
-    event :show_unknown_error_trying_to_create_issue_on_pivotal_status, before: [:say_no_connection_trying_to_create_issue_on_pivotal], guards: [:unknown_error_trying_to_create_issue_on_pivotal?] do
-      transitions from: :hidden_unknown_error_trying_to_create_issue_on_pivotal_status, to: :shown_unknown_error_trying_to_create_issue_on_pivotal_status
-    end
+  def show_unknown_error_closing_issue_on_jira_status
+    self.update unknown_error_closing_issue_on_jira_status_state: 'shown_unknown_error_closing_issue_on_jira_status'
   end
 
-  aasm(:created_issue_on_jira_status, column: 'created_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_created_issue_on_jira_status, initial: true
-    state :shown_created_issue_on_jira_status
-
-    event :show_created_issue_on_jira_status, before: [:say_created_issue_on_jira], guards: [:created_issue_on_jira?] do
-      transitions from: :hidden_created_issue_on_jira_status, to: :shown_created_issue_on_jira_status
-    end
+  def show_loged_work_to_jira_status
+    self.update loged_work_to_jira_status_state: 'shown_loged_work_to_jira_status'
   end
 
-  aasm(:no_access_to_create_issue_on_jira_status, column: 'no_access_to_create_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_no_access_to_create_issue_on_jira_status, initial: true
-    state :shown_no_access_to_create_issue_on_jira_status
-
-    event :show_no_access_to_create_issue_on_jira_status, before: [:say_no_access_to_create_issue_on_jira], after: [:save_data_received_after_creating_issue_on_jira], guards: [:no_access_to_create_issue_on_jira?] do
-      transitions from: :hidden_no_access_to_create_issue_on_jira_status, to: :shown_no_access_to_create_issue_on_jira_status
-    end
+  def show_no_access_to_log_work_to_jira_status
+    self.update no_access_to_log_work_to_jira_status_state: 'shown_no_access_to_log_work_to_jira_status'
   end
 
-  aasm(:no_connection_trying_to_create_issue_on_jira_status, column: 'no_connection_trying_to_create_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_no_connection_trying_to_create_issue_on_jira_status, initial: true
-    state :shown_no_connection_trying_to_create_issue_on_jira_status
-
-    event :show_no_connection_trying_to_create_issue_on_jira_status, before: [:say_no_connection_trying_to_create_issue_on_jira], guards: [:no_connection_trying_to_create_issue_on_jira?] do
-      transitions from: :hidden_no_connection_trying_to_create_issue_on_jira_status, to: :shown_no_connection_trying_to_create_issue_on_jira_status
-    end
+  def show_no_connection_to_log_work_to_jira_status
+    self.update no_connection_to_log_work_to_jira_status_state: 'shown_no_connection_to_log_work_to_jira_status'
   end
 
-  aasm(:unknown_error_trying_to_create_issue_on_jira_status, column: 'unknown_error_trying_to_create_issue_on_jira_status_state', whiny_transitions: false) do
-    state :hidden_unknown_error_trying_to_create_issue_on_jira_status, initial: true
-    state :shown_unknown_error_trying_to_create_issue_on_jira_status
+  def show_unknown_error_loging_work_to_jira_status
+    self.update unknown_error_loging_work_to_jira_status_state: 'shown_unknown_error_loging_work_to_jira_status'
+  end
 
-    event :show_unknown_error_trying_to_create_issue_on_jira_status, before: [:say_unknown_error_trying_to_create_issue_on_jira], guards: [:unknown_error_trying_to_create_issue_on_jira?] do
-      transitions from: :hidden_unknown_error_trying_to_create_issue_on_jira_status, to: :shown_unknown_error_trying_to_create_issue_on_jira_status
-    end
+  def show_created_issue_on_pivotal_status
+    self.update created_issue_on_pivotal_status_state: 'shown_created_issue_on_pivotal_status'
+  end
+
+  def show_no_access_trying_to_create_issue_on_pivotal_status
+    self.update no_access_trying_to_create_issue_on_pivotal_status_state: 'shown_no_access_trying_to_create_issue_on_pivotal_status'
+  end
+
+  def show_no_connection_trying_to_create_issue_on_pivotal_status
+    self.update no_connection_trying_to_create_issue_on_pivotal_status_state: 'shown_no_connection_trying_to_create_issue_on_pivotal_status'
+  end
+
+  def show_unknown_error_trying_to_create_issue_on_pivotal_status
+    self.update unknown_error_trying_to_create_issue_on_pivotal_status_state: 'shown_unknown_error_trying_to_create_issue_on_pivotal_status'
+  end
+
+  def show_created_issue_on_jira_status
+    self.update created_issue_on_jira_status_state: 'shown_created_issue_on_jira_status'
+  end
+
+  def show_no_access_to_create_issue_on_jira_status
+    self.update no_access_to_create_issue_on_jira_status_state: 'shown_no_access_to_create_issue_on_jira_status'
+  end
+
+  def show_no_connection_trying_to_create_issue_on_jira_status
+    self.update no_connection_trying_to_create_issue_on_jira_status_state: 'shown_no_connection_trying_to_create_issue_on_jira_status'
+  end
+
+  def show_unknown_error_trying_to_create_issue_on_jira_status
+    self.update unknown_error_trying_to_create_issue_on_jira_status_state: 'shown_unknown_error_trying_to_create_issue_on_jira_status'
   end
 
   def self.finish_started(comment)
@@ -1022,5 +957,13 @@ class Task < ActiveRecord::Base
 
   def enable_git?
     ENV['CAPEROMA_TEST'].blank? && ENV['CAPEROMA_INTEGRATION_TEST'].blank?
+  end
+
+  def status_started?
+    status == 'finished'
+  end
+
+  def status_finished?
+    status == 'finished'
   end
 end
