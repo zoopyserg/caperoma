@@ -379,12 +379,14 @@ RSpec.describe Task, type: :model do
     let(:faraday) { double('Faraday', post: response) }
     let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200) }
 
-    before { expect(Faraday).to receive(:new).and_return faraday }
+    before { allow(Faraday).to receive(:new).and_return faraday }
 
     describe '::finish_started' do
       let!(:started) { create :task, finished_at: nil }
 
       it 'should finish started tasks' do
+        expect(started.reload.finished_at).to be_nil
+
         Task.finish_started(nil)
 
         expect(started.reload.finished_at).to be_present
@@ -395,6 +397,8 @@ RSpec.describe Task, type: :model do
       let!(:started) { create :task, finished_at: nil }
 
       it 'should finish started tasks' do
+        expect(started.reload.finished_at).to be_nil
+
         Task.pause_started(nil)
 
         expect(started.reload.finished_at).to be_present
@@ -405,6 +409,8 @@ RSpec.describe Task, type: :model do
       let!(:started) { create :task, finished_at: nil }
 
       it 'should abort started tasks' do
+        expect(started.reload.finished_at).to be_nil
+
         Task.abort_started(nil)
 
         expect(started.reload.finished_at).to be_present
@@ -415,6 +421,8 @@ RSpec.describe Task, type: :model do
       let!(:started) { create :task, finished_at: nil }
 
       it 'should abort started tasks without time' do
+        expect(started.reload.finished_at).to be_nil
+
         Task.abort_started_without_time(nil)
 
         expect(started.reload.finished_at).to be_present
@@ -425,14 +433,39 @@ RSpec.describe Task, type: :model do
   describe 'methods' do
     let!(:jira_account) { create :account, type: '--jira' }
     let!(:pivotal_account) { create :account, type: '--pivotal' }
+    let(:faraday) { double('Faraday', post: response) }
+    let(:response) { double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200) }
+
+    let(:task) { create :task, finished_at: nil, pivotal_id: pivotal_id, jira_key: jira_key, additional_time: 5 }
+
+    before { allow(Faraday).to receive(:new).and_return faraday }
 
     context 'pivotal_id present' do
-      let!(:task) { create :task, finished_at: nil, pivotal_id: '12345678', additional_time: 5 }
+      let(:pivotal_id) { '12345678' }
+      let(:jira_key) { 'KN-5' }
+
+      describe '#start' do
+        # STOPPED HERE
+        it { expect{ task.start! }.to output(/Starting a task/).to_stdout }
+        it { expect{ task.start! }.to change{ task.state }.from('created').to('started') }
+        it { expect{ task.create_jira! }.to output(/Creating an issue in Jira/).to_stdout }
+        it { expect{ task.start! }.to change{ task.jira_state }.from('pending_jira').to('created_jira') }
+
+        it { expect{ task.start! }.to output(/A task is started/).to_stdout }
+      end
+
       describe '#finish' do
+        before { task.start! }
+
+        it { expect{ task.finish! }.to output(/Finishing current task/).to_stdout }
+        it { expect{ task.finish! }.to output(/Current task finished/).to_stdout }
+
+        it { expect{ task.finish! }.to output(/Closing the issue in Jira/).to_stdout }
+
         it 'should finish it and log time' do
-          expect(task).to receive :close_jira
-          expect(task).to receive :create_jira_worklog
-          expect(task).to receive :finish_pivotal
+          expect(task).to receive :close_jira_in_jira_namespace
+          expect(task).to receive :create_jira_worklog_in_jira_worklog_namespace
+          expect(task).to receive :finish_pivotal_in_pivotal_namespace
           task.finish
           expect(task.finished_at).to be_present
         end
@@ -470,7 +503,9 @@ RSpec.describe Task, type: :model do
     end
 
     context 'pivotal_id blank' do
-      let!(:task) { create :task, finished_at: nil, pivotal_id: nil, additional_time: 5 }
+      let(:pivotal_id) { nil }
+      let(:jira_key) { nil }
+
       describe '#finish' do
         it 'should finish it and log time' do
           expect(task).to receive :close_jira

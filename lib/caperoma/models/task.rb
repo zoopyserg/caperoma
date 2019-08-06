@@ -24,23 +24,23 @@ class Task < ActiveRecord::Base
     state :aborted
     state :aborted_without_time
 
-    event :start, binding_events: %i[set_start_time create_jira_in_jira_namespace start_jira_in_jira_namespace create_pivotal_in_pivotal_namespace start_pivotal_in_pivotal_namespace], before: %i[say_starting], after: [:say_started] do
+    event :start, binding_events: %i[set_start_time create_jira start_jira create_pivotal start_pivotal], before: %i[say_starting], after: [:say_started] do
       transitions from: :created, to: :started
     end
 
-    event :finish, binding_events: %i[close_jira_in_jira_namespace finish_pivotal_in_pivotal_namespace], before: %i[say_finishing save_finished_time], after: %i[show_time_spent say_finished] do
+    event :finish, binding_events: %i[close_jira finish_pivotal], before: %i[say_finishing save_finished_time], after: %i[show_time_spent say_finished] do
       transitions from: :started, to: :finished
     end
 
-    event :pause, binding_events: %i[close_jira_in_jira_namespace finish_pivotal_in_pivotal_namespace], before: %i[say_pausing save_finished_time], after: %i[show_time_spent say_paused] do
+    event :pause, binding_events: %i[close_jira finish_pivotal], before: %i[say_pausing save_finished_time], after: %i[show_time_spent say_paused] do
       transitions from: :started, to: :paused
     end
 
-    event :abort, binding_events: %i[close_jira_in_jira_namespace finish_pivotal_in_pivotal_namespace], before: %i[say_aborting save_finished_time], after: %i[show_time_spent say_aborted] do
+    event :abort, binding_events: %i[close_jira finish_pivotal], before: %i[say_aborting save_finished_time], after: %i[show_time_spent say_aborted] do
       transitions from: :started, to: :aborted
     end
 
-    event :abort_without_time, binding_events: [:close_jira_in_jira_namespace], before: %i[say_aborting_without_time save_finished_time], after: %i[show_time_spent say_aborted_without_time] do
+    event :abort_without_time, binding_events: [:close_jira], before: %i[say_aborting_without_time save_finished_time], after: %i[show_time_spent say_aborted_without_time] do
       transitions from: :started, to: :aborted_without_time
     end
   end
@@ -51,15 +51,15 @@ class Task < ActiveRecord::Base
     state :started_jira
     state :closed_jira
 
-    event :create_jira, binding_events: %i[show_created_issue_on_jira_status_in_created_issue_on_jira_status_namespace show_no_access_to_create_issue_on_jira_status_in_no_access_to_create_issue_on_jira_status_namespace show_no_connection_trying_to_create_issue_on_jira_status_in_no_connection_trying_to_create_issue_on_jira_status_namespace show_unknown_error_trying_to_create_issue_on_jira_status_in_unknown_error_trying_to_create_issue_on_jira_status_namespace], before: [:say_creating_in_jira], after: [:output_jira_key], guards: %i[not_test? create_on_jira?] do
+    event :create_jira, binding_events: %i[show_created_issue_on_jira_status show_no_access_to_create_issue_on_jira_status show_no_connection_trying_to_create_issue_on_jira_status show_unknown_error_trying_to_create_issue_on_jira_status], before: [:say_creating_in_jira], after: [:output_jira_key], guards: %i[not_test? create_on_jira?] do
       transitions from: :pending_jira, to: :created_jira
     end
 
-    event :start_jira, binding_events: %i[show_started_issue_on_jira_status_in_started_issue_on_jira_status_namespace show_no_access_to_start_issue_on_jira_status_in_no_access_to_start_issue_on_jira_status_namespace show_no_connection_to_start_issue_on_jira_status_in_no_connection_to_start_issue_on_jira_status_namespace show_unknown_error_on_starting_issue_on_jira_status_in_unknown_error_on_starting_issue_on_jira_status_namespace], before: [:say_starting_in_jira], guards: %i[not_test? start_on_jira?] do
+    event :start_jira, binding_events: %i[show_started_issue_on_jira_status show_no_access_to_start_issue_on_jira_status show_no_connection_to_start_issue_on_jira_status show_unknown_error_on_starting_issue_on_jira_status], before: [:say_starting_in_jira], guards: %i[not_test? start_on_jira?] do
       transitions from: :created_jira, to: :started_jira
     end
 
-    event :close_jira, binding_events: %i[show_closed_issue_on_jira_status_in_closed_issue_on_jira_status_namespace show_no_access_to_close_issue_on_jira_status_in_no_access_to_close_issue_on_jira_status_namespace show_no_connection_to_close_issue_on_jira_status_in_no_connection_to_close_issue_on_jira_status_namespace show_unknown_error_closing_issue_on_jira_status_in_unknown_error_closing_issue_on_jira_status_namespace], before: [:say_closing_in_jira], guards: :not_test? do
+    event :close_jira, binding_events: %i[create_jira_worklog show_closed_issue_on_jira_status show_no_access_to_close_issue_on_jira_status show_no_connection_to_close_issue_on_jira_status show_unknown_error_closing_issue_on_jira_status], before: [:say_closing_in_jira], guards: :not_test? do
       transitions from: :started_jira, to: :closed_jira
     end
   end
@@ -70,15 +70,15 @@ class Task < ActiveRecord::Base
     state :started_pivotal
     state :finished_pivotal
 
-    event :create_pivotal, binding_events: %i[show_created_issue_on_pivotal_status_in_created_issue_on_pivotal_status_namespace show_no_access_trying_to_create_issue_on_pivotal_status_in_no_access_trying_to_create_issue_on_pivotal_status_namespace show_no_connection_trying_to_create_issue_on_pivotal_status_in_no_connection_trying_to_create_issue_on_pivotal_status_namespace show_unknown_error_trying_to_create_issue_on_pivotal_status_in_unknown_error_trying_to_create_issue_on_pivotal_status_namespace], before: [:say_creating_in_pivotal], guards: %i[not_test? create_on_pivotal?] do
+    event :create_pivotal, binding_events: %i[show_created_issue_on_pivotal_status show_no_access_trying_to_create_issue_on_pivotal_status show_no_connection_trying_to_create_issue_on_pivotal_status show_unknown_error_trying_to_create_issue_on_pivotal_status], before: [:say_creating_in_pivotal], guards: %i[not_test? create_on_pivotal?] do
       transitions from: :pending_pivotal, to: :created_pivotal
     end
 
-    event :start_pivotal, binding_events: %i[show_start_on_pivotal_status_in_start_on_pivotal_status_namespace show_no_access_to_start_issue_on_pivotal_status_in_no_access_to_start_issue_on_pivotal_status_namespace show_no_connection_to_start_issue_on_pivotal_status_in_no_connection_to_start_issue_on_pivotal_status_namespace show_unknown_error_on_starting_issue_on_pivotal_status_in_unknown_error_on_starting_issue_on_pivotal_status_namespace], before: [:say_starting_in_pivotal], guards: %i[not_test? start_on_pivotal?] do
+    event :start_pivotal, binding_events: %i[show_start_on_pivotal_status show_no_access_to_start_issue_on_pivotal_status show_no_connection_to_start_issue_on_pivotal_status show_unknown_error_on_starting_issue_on_pivotal_status], before: [:say_starting_in_pivotal], guards: %i[not_test? start_on_pivotal?] do
       transitions from: :created_pivotal, to: :started_pivotal
     end
 
-    event :finish_pivotal, before: %i[say_finishing_in_pivotal show_finished_on_pivotal_status_in_finished_on_pivotal_status_namespace show_no_access_to_finish_on_pivotal_status_in_no_access_to_finish_on_pivotal_status_namespace show_no_connection_to_finish_on_pivotal_status_in_no_connection_to_finish_on_pivotal_status_namespace show_unknown_error_on_finishing_on_pivotal_status_in_unknown_error_on_finishing_on_pivotal_status_namespace], guards: %i[not_test? finish_on_pivotal?] do
+    event :finish_pivotal, before: %i[say_finishing show_finished_on_pivotal_status show_no_access_to_finish_on_pivotal_status show_no_connection_to_finish_on_pivotal_status show_unknown_error_on_finishing_on_pivotal_status], guards: %i[not_test? finish_on_pivotal?] do
       transitions from: :started_pivotal, to: :finished_pivotal
     end
   end
@@ -87,7 +87,7 @@ class Task < ActiveRecord::Base
     state :pending_jira_worklog, initial: true
     state :created_jira_worklog
 
-    event :create_jira_worklog, binding_events: %i[show_loged_work_to_jira_status_in_loged_work_to_jira_status_namespace show_no_access_to_log_work_to_jira_status_in_no_access_to_log_work_to_jira_status_namespace show_no_connection_to_log_work_to_jira_status_in_no_connection_to_log_work_to_jira_status_namespace show_unknown_error_loging_work_to_jira_status_in_unknown_error_loging_work_to_jira_status_namespace], before: [:say_logging_started], guards: %i[not_test? should_log_work?] do
+    event :create_jira_worklog, binding_events: %i[show_loged_work_to_jira_status show_no_access_to_log_work_to_jira_status show_no_connection_to_log_work_to_jira_status show_unknown_error_loging_work_to_jira_status], before: [:say_logging_started], guards: %i[not_test? should_log_work?] do
       transitions from: :pending_jira_worklog, to: :created_jira_worklog
     end
   end
