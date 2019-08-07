@@ -16,6 +16,7 @@ gem 'whenever', require: false
 
 group :development do
   gem 'bundler'
+  gem 'byebug'
   gem 'database_cleaner'
   gem 'factory_girl'
   gem 'juwelier'
@@ -24,4 +25,8 @@ group :development do
   gem 'shoulda'
   gem 'shoulda-matchers'
   gem 'timecop'
+end
+
+group :test do
+  gem 'byebug'
 end

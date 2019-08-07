@@ -71,7 +71,7 @@ RSpec.configure do |config|
     end
 
     if example.metadata[:unstab_api_calls].blank?
-      response = double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200)
+      response = double('Faraday', body: JIRA_ISSUE_CREATION_RESPONSE, status: 200, reason_phrase: 'OK')
       faraday = double('Faraday', post: response)
 
       allow(Faraday).to receive(:new).and_return faraday
