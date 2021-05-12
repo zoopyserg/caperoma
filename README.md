@@ -2,15 +2,10 @@
 
 ### Automate your workflow with Ruby / Git / Jira / PivotalTracker.
 
-## Support me on Patreon.
-https://www.patreon.com/sergevinogradoff
-
 ## The idea.
 Caperoma is a "full-cycle" command.
 
-It solves everything that you need to do before you start working on the task, and everything you need to do after you finish the feature.
-
-Caperoma solves for you: 
+It saves you a TON of time because it does all these things for you:
 - pulling the latest code from upstream before you start working
 - remembering from which branch you started the feature to later make a pull request into it
 - creating & starting tasks in Jira
@@ -31,63 +26,73 @@ Caperoma solves for you:
 - switching back into the original branch
 - and many more decisions that you often don't realize, and which you can forget hundreds of times during the time of working on the project.
 
-This saves a ton of time.
+You focus on the REAL work, and not on all this ID tracking, time tracking etc.
 
-You don't get distracted on things that you have to do thousands of times per year.
+You save 10-20 minutes on every task, because you don't spend time renaming git branches and copying Jira ID's into the commits.
+In a project with 1-year-long development and 1000 features, time savings add up, and help to save up to 40% of project's budget.
 
-You focus only on solving tasks.
+## Say Thanks:
+Support me on Patreon to speed up the development: https://www.patreon.com/sergevinogradoff
 
 ## Scheme
 <img src="images/circle.png" width="100%">
-Everything that is not underlined Caperoma does for you.
+This is a usual flow of Feature development.
+Things that are not underlined are usually required by your company to manage the tasks and the salaries and other things that don't affect the product.
+Things that ARE underlined are steps of manifacturing an actual feature.
 
-The development of Caperoma is developing in the direction of closing this circle.
+Caperoma does everything that you don't want to do when you make a feature.
+
+Everything that is not underlined on this chart is done by Caperoma.
+
+## The Future
+
+We are trying to connect all the dots to close this circle (to make a fully automated programming process).
 
 ## Demo
 You need to make a feature.
 ```bash
 caperoma feature --title "your first feature"
+# making the feature...
 touch ./your_first_feature.rb
 rspec .
+# feature is done.
 caperoma finish
 ```
-That's it.
+That's it. `caperoma feature`, do the work, `caperoma finish`.
 
-Open Github and you'll see a pull request into the branch from which you started.
-
-The branch and the commit have correct names.
-
-PivotalTracker has a new task.
-
-Jira received the time you spent.
+These two lines:
+- created a task in PivotalTracker.
+- created a task in Jira.
+- created a new Git branch in your project
+- created a pull request into the correct branch from which you started.
+- generated the commit names that include Pivotal/Jira compatible IDs.
+- logged to Jira the time you spent on this task.
+- planned the report (for later) about this feature to your management
 
 Caperoma did tens of steps for you.
 
-You would spend about 10 minutes manually pressing the buttons in Github, Jira and Pivotal and entering these commands into the console.
-10 minutes for each task, in a project with 1000 tasks, you save up to 20% of the project budget that you did not spend on a routine.
+You spent `zero` minutes doing all those steps.
 
-Thanks to Caperoma, you can spend this 20% on new features or fixing bugs.
-
-Not to mention the invaluable savings of brain resources that allow you to easily work on larger projects.
-
-At the same time, tracking systems receive the most accurate information about the work done for further statistics.
+You freed your brain from all these things so that you can make more features and work on bigger projects.
 
 ## Demo 2
-You urgently need to fix the bug.
+You urgently need to fix a bug.
 ```bash
 caperoma bug --title "your urgent bugfix"
 touch ./your_urgent_bugfix.rb
 caperoma finish
 ```
-Every second of delay brings company losses which are often much higher than the price of the bug fix.
+Again, Caperoma did all the management and logistics for you, you just made the code that works and typed `caperoma finish`.
 
-Caperoma did all the management for you.
+You delivered a bugfix 10 minutes earlier, which made your clients happier 10 minutes sooner.
 
-You did not have to do manually dozens of these steps in a hurry (pull requests, time tracking, etc.).
+You did not rush.
 
-You also did not have to sacrifice conventions for the sake of speed (which often turns into a bad habit, driving a project to a standstill).
+Let's face it, you probably know Rails and your project so well you can fix that bug with your eyes closed.
 
-You implemented the solution, but on the way to it, you were secured by the Caperoma's algorithms.
+Pivotal IDs, Time Tracking, Pull Requests are the only things you can make mistakes in when you are fixing an urgent bug in a high-load environment.
+
+And now, when all these levels of Management are so smooth, you sometimes even forget that they exist, because you have Caperoma.
 
 ## Task types supported by Caperoma
 
@@ -196,8 +201,14 @@ caperoma finish
 ## Demo 4: A feature with Pivotal ID and your work description:
 ```bash
 caperoma feature --title "your second feature" --pivotal_task_id 12345678
-# Same as before, but also:
-# A Pivotal task was launched with ID #12345678.
+# Created a task in Jira with the title "your first feature".
+# Took the ID of the created Jira feature (i.e. PRJ -123).
+# Started the Pivotal task with ID #12345678.
+# Generated the name of the git branch considering Jira ID and task name (i.e. prj-123-your-first-feature).
+# Pulled the latest version of the current branch from upstream (i.e. git fetch && git rebase origin/master).
+# Switched into a new git branch with the mentioned name (i.e. git checkout -b prj-123-your-first-feature).
+# Status of the task in Jira changed to "in progress".
+# Started the timer.
 
 touch ./your_second_feature.rb
 
@@ -210,6 +221,10 @@ caperoma finish "I made a new file"
 ```
 
 ## Demo 5: A feature with adding time (in minutes):
+An example of usage when you started a feature too late.
+For example you were looking into a problem for 23 minutes before you realized you need to make a separate git branch and fix it.
+In other words, for situations when you want to add X minutes (23 in this example) to the total timer:
+
 ```bash
 caperoma feature --title "your third feature" --pivotal_task_id 12345678 --additional_time 23
 # Or a shorter version: 
@@ -225,7 +240,9 @@ caperoma finish
 # I.e. if you spent 10 minutes on this task, Jira will receive 33 minutes (10+23, "timer time" + "additional time").
 ```
 
-# Caperoma can send reports to your boss about what tasks are finished and how much time was spent on each one and all of them together (every day / every 3 days / every week).
+# Caperoma can send very well formatted reports to your management
+The reports will contain info about what tasks are finished and how much time was spent on each one and all of them together.
+
 ```bash
 # Setup:
 
@@ -239,22 +256,22 @@ caperoma recipients add your_team_lead@domain.com
 # Turn on automatic reports:
 caperoma report auto on
 ```
-The recipients will get:
-- a daily report every day
-- a 3-day report on Wed and Fri
-- a weekly report on Fri
+The reports will be sent (as required in most companies):
+- a daily report every day (every day at 5pm)
+- a 3-day report (on Wed and Fri your management will get a report about all the tasks that were completed during last 3 days)
+- a weekly report on Fri (all the features and bugs made during the week).
 
 (8 reports per week in total)
 
 (they are sent at 5 pm, so at that time the computer should be on, as the reports are using crontab).
 
-The format of the emails is a table that lists all the tasks during the mentioned period:
+The reports contain:
+- Time period.
 - Jira ID (with a link).
 - Pivotal ID (with a link).
-- Task title.
+- Task name.
 - The amount of time spent on the task.
-
-Plus the total amount of time spent on them.
+- The total amount of time spent on all tasks.
 
 <img src="images/report.png" width="100%">
 
