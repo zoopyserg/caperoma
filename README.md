@@ -29,6 +29,7 @@ It saves you a TON of time because it does all these things for you:
 You focus on the REAL work, and not on all this ID tracking, time tracking etc.
 
 You save 10-20 minutes on every task, because you don't spend time renaming git branches and copying Jira ID's into the commits.
+
 In a project with 1-year-long development and 1000 features, time savings add up, and help to save up to 40% of project's budget.
 
 ## Say Thanks:
@@ -37,7 +38,9 @@ Support me on Patreon to speed up the development: https://www.patreon.com/serge
 ## Scheme
 <img src="images/circle.png" width="100%">
 This is a usual flow of Feature development.
+
 Things that are not underlined are usually required by your company to manage the tasks and the salaries and other things that don't affect the product.
+
 Things that ARE underlined are steps of manifacturing an actual feature.
 
 Caperoma does everything that you don't want to do when you make a feature.
