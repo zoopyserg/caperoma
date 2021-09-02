@@ -111,7 +111,7 @@ GEM
       loofah (~> 2.2, >= 2.2.2)
     rainbow (3.0.0)
     rake (12.3.3)
-    rdoc (6.1.1)
+    rdoc (6.3.2)
     rspec (3.8.0)
       rspec-core (~> 3.8.0)
       rspec-expectations (~> 3.8.0)
