@@ -47,6 +47,8 @@ Caperoma does everything that you don't want to do when you make a feature.
 
 Everything that is not underlined on this chart is done by Caperoma.
 
+Note that "Write the actual code" part gets partially solved with Github Copilot (an OpenAI-powered tool that generates code based on the description). But we are still working on that.
+
 ## The Future
 
 We are trying to connect all the dots to close this circle (to make a fully automated programming process).
